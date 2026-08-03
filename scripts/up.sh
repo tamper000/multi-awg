@@ -18,6 +18,20 @@ TABLE_ID=111
 FWMARK="0x2"
 RULE_PRIO=10000
 
+echo "[*] Initializing AmneziaWG: $AWG_IF "
+
+amneziawg-go $AWG_IF
+awg syncconf $AWG_IF <(awg-quick strip $AWG_IF)
+
+AWG_ADDR=$(awk -F'=' '/^[[:space:]]*Address[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' /etc/amnezia/amneziawg/$AWG_IF.conf)
+
+if [[ -z "$AWG_ADDR" ]]; then
+    echo "[-] Error: Address not found in /etc/amnezia/amneziawg/$AWG_IF.conf"
+    exit 1
+fi
+ip address add "$AWG_ADDR" dev "$AWG_IF"
+ip link set dev "$AWG_IF" up
+
 echo "[*] Initializing routing: $AWG_IF -> $MIHOMO_IF via fwmark"
 
 if ! ip link show "$AWG_IF" &> /dev/null; then
@@ -37,6 +51,11 @@ if [[ -z "$CLIENT_SUBNET" ]]; then
     exit 1
 fi
 echo "[+] Detected client subnet: $CLIENT_SUBNET"
+
+iptables -A FORWARD -i $AWG_IF -j ACCEPT
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -o $MIHOMO_IF -j MASQUERADE
+
 
 echo "[*] Configuring Policy-Based Routing (Table $TABLE_ID)..."
 ip route replace default dev "$MIHOMO_IF" table "$TABLE_ID"

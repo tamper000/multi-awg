@@ -34,7 +34,7 @@ services:
     volumes:
       - ./amnezia-config:/etc/amnezia/amneziawg:ro
       - ./scripts:/scripts:ro
-    command: sh -c "awg-quick up awg0 && ./scripts/up.sh awg0 mihomo0 && tail -f /dev/null"
+    command: sh -c "./scripts/up.sh awg0 mihomo0 && tail -f /dev/null"
     network_mode: service:mihomo
     depends_on:
       - mihomo
