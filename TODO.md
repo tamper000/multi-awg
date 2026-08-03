@@ -9,3 +9,4 @@
    7. https://apps.apple.com/us/app/linkclashx/id6757075299 - appstore LinkClashX
    8. https://apps.apple.com/us/app/nextin/id6754002454 - appstore Nextin
    9. https://github.com/NodePassProject/Everywhere - appstore (https://apps.apple.com/us/app/everywhere-proxy/id6766003090)
+3. Настройка github workflow и залив контейнеров worker, server на ghcr
