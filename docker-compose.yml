@@ -74,8 +74,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./amnezia-config:/app/amnezia-config
       - ./mihomo-config/example.yaml:/etc/mihomo_template.yaml:ro
-    ports:
-      - "9090:9090"
     depends_on:
       - mihomo
       - amneziawg
