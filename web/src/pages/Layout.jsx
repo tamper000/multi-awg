@@ -1,0 +1,16 @@
+import { api, session } from '../api.js'
+import { Brand, Icon } from '../ui.jsx'
+import { navigate } from '../App.jsx'
+
+export default function Layout({ user, title, subtitle, action, onLogout, children }) {
+  async function logout() {
+    try { await api('/api/auth/logout', { method: 'POST' }) } catch {}
+    session.clear()
+    onLogout?.()
+    window.dispatchEvent(new Event('session-expired'))
+  }
+  return <div class="app-shell">
+    <header class="topbar"><Brand compact /><div class="topbar-user"><span class="user-dot">{user.username[0].toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Пользователь'}</small></div><button class="icon-button" onClick={logout} aria-label="Выйти"><Icon name="logout" /></button></div></header>
+    <main class="page"><div class="page-heading"><div><span class="eyebrow">Банановый Ускоритель</span><h1>{title}</h1><p>{subtitle}</p></div>{action}</div>{children}</main>
+  </div>
+}

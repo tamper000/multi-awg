@@ -1,0 +1,12 @@
+worker
+amnezia-config/
+mihomo-config/
+scripts/
+awg-proxy/
+.env
+.env.example
+.gitignore
+architecture.md
+docker-compose.yml
+Dockerfile.worker
+.dockerignore

@@ -1,0 +1,11 @@
+.env.worker
+.env.server
+peers.json
+cache.db
+geoip.metadb
+.codegraph
+frontend-api.md
+AGENTS.md
+
+node_modules/
+dist/

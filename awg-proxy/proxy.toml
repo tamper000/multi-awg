@@ -1,0 +1,109 @@
+# ── Required ──────────────────────────────────────────────────────────────────
+
+# Address and port the proxy listens on for incoming VPN/DPI traffic.
+listen = "0.0.0.0:51821"
+
+# Address and port of the AmneziaWG backend (must be loopback or a trusted
+# interface — not exposed to the internet).
+backend = "127.0.0.1:51820"
+
+# ── Protocol imitation ────────────────────────────────────────────────────────
+
+# Which protocol to imitate.
+#   "quic"  — High-entropy QUIC 1-RTT padding; responds to QUIC Initial probes
+#             with a valid Version Negotiation packet (RFC 9000).
+#   "dns"   — EDNS0 OPT-framed DNS response padding (the WG payload becomes the
+#             OPT option-data); responds to DNS queries with a valid SERVFAIL
+#             reply (RFC 1035), or with the real upstream answer when
+#             dns_forward_enabled is set (see DNS forwarding below).
+#   "stun"  — STUN Binding Success Response padding (XOR-MAPPED-ADDRESS +
+#             SOFTWARE attributes); responds to STUN Binding Requests with a
+#             valid Binding Success reply (RFC 5389/8489).
+#   "sip"   — SIP header-style padding; responds to SIP requests with a valid
+#             100 Trying reply (RFC 3261).
+#   "auto"  — Detect the protocol from each incoming packet; use the detected
+#             protocol for that packet. Padding transformation is applied only
+#             after a protocol has been detected for the client; packets
+#             received before any probe is seen are forwarded as-is.
+imitate_protocol = "sip"
+
+# ── Session management ────────────────────────────────────────────────────────
+
+# How long (seconds) a client session can remain idle before it is cleaned up.
+# Idle means no packets *from the client*; backend→client relay traffic (e.g.
+# AWG retrying handshakes toward a client that disappeared) does not keep a
+# session alive.
+session_ttl_secs = 300
+
+# How often (seconds) the cleanup task runs to reap expired sessions.
+cleanup_interval_secs = 60
+
+# Maximum number of concurrent client sessions.
+# Both the session table and the metrics store enforce this limit.
+max_sessions = 10000
+
+# JSON file refreshed by the proxy with currently active sessions.
+status_file = "/workdir/sessions.json"
+
+# How often (seconds) the status file is refreshed.
+status_interval_secs = 5
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+
+# Maximum number of probe responses sent to a single client per second.
+# Uses a token-bucket algorithm. Packets exceeding the limit are still
+# forwarded to the backend but no probe response is sent.
+rate_limit_per_sec = 5
+
+# ── I/O tuning ────────────────────────────────────────────────────────────────
+
+# Userspace recv() buffer size in bytes for the frontend listener (a single
+# buffer — this is not kernel socket memory; see socket_buffer_bytes).
+buffer_size = 65535
+
+# Kernel socket buffer size (SO_RCVBUF/SO_SNDBUF) in bytes, applied to the
+# frontend listener and each backend session socket. Absorbs bursts so the
+# proxy does not drop datagrams under load; 0 leaves the OS defaults. The
+# kernel may clamp to net.core.rmem_max/wmem_max and roughly doubles the
+# requested value for its own bookkeeping.
+socket_buffer_bytes = 4194304
+
+# Receive-buffer size of each per-session relay task, in bytes. Resident
+# memory per active session (relay memory = max_sessions × this) and the
+# largest backend→client datagram a session can relay — larger datagrams are
+# truncated. The default covers any internet-path tunnel MTU (≤ ~1500) plus
+# AmneziaWG S-padding; raise it (up to 65535) only for jumbo-MTU deployments.
+relay_buffer_size = 8192
+
+# ── AWG integration ───────────────────────────────────────────────────────────
+
+# Path to the AmneziaWG interface config file (INI-style).
+# When set, the proxy reads S1–S4 and H1–H4 to enable per-type padding
+# transformation on outgoing packets. Without this key, packets are forwarded
+# verbatim (no padding transform).
+awg_config = "/workdir/awg0.conf"
+
+# ── DNS forwarding (optional) ─────────────────────────────────────────────────
+
+# Forward detected DNS queries to a real upstream resolver before (or instead
+# of) generating the SERVFAIL probe response.
+# Only valid when imitate_protocol = "dns" or "auto".
+dns_forward_enabled = false
+
+# Upstream DNS resolver to forward queries to when dns_forward_enabled = true.
+dns_upstream = "1.1.1.1:53"
+
+# Timeout (milliseconds) waiting for a response from the upstream DNS resolver.
+dns_upstream_timeout_ms = 1500
+
+# ── Stateful QUIC handshake (optional) ───────────────────────────────────────
+
+# Enable the stateful QUIC TLS handshake responder (quinn-proto based).
+# When enabled, the proxy completes a real QUIC handshake with probing clients
+# instead of sending a simple Version Negotiation packet.
+# Only valid when imitate_protocol = "quic" or "auto".
+quic_handshake_enabled = false
+
+# TLS SNI domain used to generate the self-signed certificate for the QUIC
+# handshake. Should match what a legitimate server at this address would use.
+quic_certificate_domain = "localhost"

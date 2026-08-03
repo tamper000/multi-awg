@@ -1,0 +1,102 @@
+services:
+  mihomo:
+    image: metacubex/mihomo:Alpha
+    container_name: mihomo-core
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+      net.ipv4.conf.all.rp_filter: "2"
+      net.ipv4.conf.default.rp_filter: "2"
+    volumes:
+      - ./mihomo-config:/root/.config/mihomo
+    ports:
+      - "5060:51821/udp" # expose awg-proxy port to host
+    networks:
+      - vpn
+    healthcheck:
+      test: "pidof mihomo"
+      interval: "10s"
+      timeout: "2s"
+      retries: 3
+      start_period: "10s"
+
+  amneziawg:
+    image: docker.io/amneziavpn/amneziawg-go:3.0.3
+    container_name: amneziawg
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./amnezia-config:/etc/amnezia/amneziawg:ro
+      - ./scripts:/scripts:ro
+    command: sh -c "awg-quick up awg0 && ./scripts/up.sh awg0 mihomo0 && tail -f /dev/null"
+    network_mode: service:mihomo
+    depends_on:
+      - mihomo
+    healthcheck:
+      test: "test -d /sys/class/net/awg0"
+      interval: "10s"
+      timeout: "2s"
+      retries: 3
+      start_period: "5s"
+
+  awg-proxy:
+    build: ./awg-proxy
+    container_name: awg-proxy
+    volumes:
+      - ./awg-proxy/proxy.toml:/workdir/proxy.toml:ro
+      - ./amnezia-config/awg0.conf:/workdir/awg0.conf:ro
+    command: ["/workdir/proxy.toml"]
+    network_mode: service:mihomo
+    depends_on:
+      - amneziawg
+      - mihomo
+    healthcheck:
+      test: "pidof proxy"
+      interval: "10s"
+      timeout: "2s"
+      retries: 3
+      start_period: "5s"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: multi-awg-worker
+    env_file:
+      - .env.worker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./amnezia-config:/app/amnezia-config
+      - ./mihomo-config/example.yaml:/etc/mihomo_template.yaml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - mihomo
+      - amneziawg
+      - awg-proxy
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: multi-awg-server
+    env_file:
+      - .env.server
+    volumes:
+      - server-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - worker
+
+networks:
+  vpn:
+
+volumes:
+  server-data:
