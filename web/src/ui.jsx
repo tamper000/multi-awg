@@ -16,8 +16,10 @@ export function Icon({ name, size = 20 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
+export const PANEL_NAME = import.meta.env.VITE_PANEL_NAME || 'Банановый Ускоритель'
+
 export function Brand({ compact = false }) {
-  return <div class={`brand ${compact ? 'brand-compact' : ''}`}><span class="brand-mark"><Icon name="bolt" /></span><span>Банановый<br />Ускоритель</span></div>
+  return <div class={`brand ${compact ? 'brand-compact' : ''}`}><span class="brand-mark"><Icon name="bolt" /></span><span>{PANEL_NAME}</span></div>
 }
 
 export function Loader() {

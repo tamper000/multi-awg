@@ -9,6 +9,7 @@ export default function UserPanel({ user, onLogout }) {
   const [configs, setConfigs] = useState(null)
   const [error, setError] = useState('')
   const [modal, setModal] = useState('')
+  const [createError, setCreateError] = useState('')
   const [pwError, setPwError] = useState('')
   const [pwDone, setPwDone] = useState(false)
 
@@ -27,7 +28,7 @@ export default function UserPanel({ user, onLogout }) {
     try {
       const created = await api('/api/user/configs', { method: 'POST', body: jsonBody({ name: form.get('name') }) })
       setModal(''); navigate(`/subscription/${created.sub_token}`)
-    } catch (err) { setError(err.message) }
+    } catch (err) { setCreateError(err.message) }
   }
 
   async function remove(name) {
@@ -63,7 +64,12 @@ export default function UserPanel({ user, onLogout }) {
         </article>)}</div>}
       </section>
     </>}
-    {modal === 'create' && <Modal title="Новый конфиг" onClose={() => setModal('')}><p>Назовите устройство, чтобы потом легко его узнать.</p><form class="form-stack" onSubmit={create}><label>Название<input name="name" required pattern="[A-Za-zА-Яа-яЁё0-9]+" placeholder="Например, Телефон" autoFocus /></label><button class="button button-primary button-wide"><Icon name="plus" /> Создать подключение</button></form></Modal>}
+    {modal === 'create' && <Modal title="Новый конфиг" onClose={() => setModal('')}>{createError ? <>
+      <Notice>{createError === 'config limit reached' ? 'Достигнут лимит конфигов' : createError}</Notice>
+      <button class="button button-primary button-wide" onClick={() => setModal('')}>Закрыть</button>
+    </> : <>
+      <p>Назовите устройство, чтобы потом легко его узнать.</p><form class="form-stack" onSubmit={create}><label>Название<input name="name" required pattern="[A-Za-zА-Яа-яЁё0-9]+" placeholder="Например, Телефон" autoFocus /></label><button class="button button-primary button-wide"><Icon name="plus" /> Создать подключение</button></form>
+    </>}</Modal>}
     {modal === 'password' && <Modal title="Смена пароля" onClose={() => { setModal(''); setPwError(''); setPwDone(false) }}><Notice>{pwError}</Notice>{pwDone ? <p class="pw-done">Пароль изменён.</p> : <form class="form-stack" onSubmit={changePassword}><label>Текущий пароль<input type="password" name="old" required autoFocus /></label><label>Новый пароль<input type="password" name="new" required /></label><button class="button button-primary button-wide">Сохранить пароль</button></form>}</Modal>}
   </Layout>
 }
