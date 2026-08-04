@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  COMPOSE_FILE:
+    sh: echo "{{ if .LOCAL }}docker-compose.local.yml{{ else }}docker-compose.yml{{ end }}"
+  COMPOSE_CMD: docker compose -f {{.COMPOSE_FILE}}
+
+tasks:
+  run:
+    cmds:
+      - "{{.COMPOSE_CMD}} up"
+
+  run-build:
+    cmds:
+      - "{{.COMPOSE_CMD}} up --build"
+
+  stop:
+    cmds:
+      - "{{.COMPOSE_CMD}} down"
+
+  restart:
+    cmds:
+      - "{{.COMPOSE_CMD}} down"
+      - "{{.COMPOSE_CMD}} up"

@@ -67,18 +67,19 @@ Frontend ──HTTP──► Backend (cmd/server, :8080) ──HTTP──► Wor
 
 ## Запуск
 
-### Через Docker (продакшн)
+Через [Task](https://taskfile.dev/):
 
 ```bash
-docker compose up
+task run            # продакшн (docker-compose.yml)
+task run-build      # продакшн + пересборка образов
+task stop           # остановка
+task restart        # перезапуск
 ```
 
-Поднимает весь стек: mihomo, amneziawg, awg-proxy, worker, server.
-
-### Через Docker (локальная разработка)
-
-Собирает образы из локальных Dockerfile вместо ghcr:
+Локальная разработка (сборка из локальных Dockerfile):
 
 ```bash
-docker compose -f docker-compose.local.yml up --build
+LOCAL=true task run          # запуск
+LOCAL=true task run-build    # запуск + пересборка
+LOCAL=true task stop         # остановка
 ```
