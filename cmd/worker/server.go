@@ -68,6 +68,7 @@ func (s *Server) Handler() http.Handler {
 		r.Get("/api/peers/{name}/sub", s.getPeerSub)
 		r.Delete("/api/peers/{name}", s.deletePeer)
 		r.Get("/api/stats", s.getStats)
+		r.Post("/api/sync", s.handleSync)
 	})
 
 	return r
@@ -462,6 +463,17 @@ func (s *Server) removePeers(w http.ResponseWriter, r *http.Request, names []str
 	}
 
 	writeJSON(w, 200, map[string]string{"status": "deleted"})
+}
+
+func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.syncAWG(); err != nil {
+		writeJSON(w, 500, map[string]string{"error": fmt.Sprintf("sync awg: %v", err)})
+		return
+	}
+	writeJSON(w, 200, map[string]string{"status": "synced"})
 }
 
 func (s *Server) syncAWG() error {

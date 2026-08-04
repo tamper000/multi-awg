@@ -192,3 +192,16 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 		"expires_at": expiresAt,
 	})
 }
+
+func (h *Handler) syncWorker(w http.ResponseWriter, r *http.Request) {
+	status, body, err := h.worker.Sync(r.Context())
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+	if status >= 400 {
+		writeJSON(w, status, body)
+		return
+	}
+	writeJSON(w, 200, map[string]string{"status": "synced"})
+}

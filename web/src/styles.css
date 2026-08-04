@@ -48,6 +48,7 @@ input::placeholder { color: #5f5f5c; }
 .topbar-user { display: flex; align-items: center; gap: 11px; }
 .topbar-user div { display: grid; }
 .topbar-user small { color: var(--muted); font-size: .7rem; }
+.sync-button { color: var(--lime); }
 .user-dot { display: grid; place-items: center; width: 38px; height: 38px; color: #151515; background: var(--purple); border-radius: 12px; font-weight: 800; }
 .page { width: min(1180px, calc(100% - 48px)); margin: auto; padding: 64px 0 100px; }
 .page-heading { margin-bottom: 46px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
@@ -83,6 +84,9 @@ input::placeholder { color: #5f5f5c; }
 
 .notice { margin-bottom: 20px; padding: 13px 16px; color: #ffbbb4; background: #351d1b; border: 1px solid #5f2c28; border-radius: 13px; font-size: .86rem; }
 .notice-warning { color: #e9d698; background: #342e1c; border-color: #59502d; }
+.notice-success { color: var(--lime); background: #28321d; border-color: #4a5f28; }
+.sync-notice { position: fixed; z-index: 10; top: 94px; right: 24px; width: min(360px, calc(100% - 48px)); }
+.sync-notice .notice { margin: 0; box-shadow: 0 14px 40px #0008; }
 .loader-wrap { min-height: 260px; display: grid; place-content: center; justify-items: center; gap: 14px; color: var(--muted); }
 .loader { width: 34px; height: 34px; border: 3px solid #333; border-top-color: var(--lime); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -148,6 +152,7 @@ input::placeholder { color: #5f5f5c; }
 .traffic { margin-top: 18px; padding-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #292929; }
 .traffic div { display: grid; gap: 6px; }
 .traffic small { color: var(--muted); }
+.button-spinning svg { animation: spin .7s linear infinite; }
 
 @media (max-width: 760px) {
   .topbar { height: 68px; padding: 0 16px; }
@@ -155,7 +160,7 @@ input::placeholder { color: #5f5f5c; }
   .brand-compact span:last-child { font-size: .78rem; }
   .page, .sub-main, .sub-header { width: calc(100% - 28px); }
   .page { padding: 38px 0 70px; }
-  .page-heading { margin-bottom: 30px; align-items: stretch; flex-direction: column; }
+  .page-heading { margin-bottom: 30px; align-items: stretch; flex-direction: column; gap: 10px; }
   .page-heading > div { min-width: 0; }
   .page-heading .button { width: 100%; }
   .stats-grid, .method-grid, .config-grid { grid-template-columns: 1fr; }

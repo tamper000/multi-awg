@@ -66,6 +66,7 @@ func (h *Handler) Routes() http.Handler {
 		r.Get("/users/{username}", h.getUser)
 		r.Delete("/users/{username}", h.deleteUser)
 		r.Patch("/users/{username}", h.patchUser)
+		r.Post("/sync", h.syncWorker)
 	})
 
 	r.Route("/api/user", func(r chi.Router) {

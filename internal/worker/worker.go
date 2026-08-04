@@ -130,6 +130,27 @@ func (c *Client) GetStats(ctx context.Context) (int, interface{}, error) {
 	return resp.StatusCode, stats, nil
 }
 
+func (c *Client) Sync(ctx context.Context) (int, interface{}, error) {
+	resp, err := c.do(ctx, http.MethodPost, "/api/sync", nil)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		var e Error
+		_ = json.NewDecoder(resp.Body).Decode(&e)
+		return resp.StatusCode, e, nil
+	}
+	var status struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return 0, nil, fmt.Errorf("decode worker response: %w", err)
+	}
+	return resp.StatusCode, status, nil
+}
+
 func (c *Client) DeletePeer(ctx context.Context, name string) (int, interface{}, error) {
 	return c.deletePeers(ctx, []string{name})
 }
