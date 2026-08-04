@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { api, jsonBody, session } from '../api.js'
 import { Brand, Icon, Notice } from '../ui.jsx'
 import { navigate } from '../App.jsx'
@@ -7,13 +7,11 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function submit(event) {
-    event.preventDefault()
+  async function login(username, password) {
     setLoading(true)
     setError('')
-    const form = new FormData(event.currentTarget)
     try {
-      const data = await api('/api/auth/login', { method: 'POST', body: jsonBody({ username: form.get('username'), password: form.get('password') }) })
+      const data = await api('/api/auth/login', { method: 'POST', body: jsonBody({ username, password }) })
       session.set(data.token, data.user)
       onLogin(data.user)
       navigate(data.user.role === 'admin' ? '/admin' : '/dashboard')
@@ -22,6 +20,21 @@ export default function Login({ onLogin }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.hash.slice(1))
+    const username = params.get('username')
+    const password = params.get('password')
+    if (!username || !password) return
+    history.replaceState({}, '', location.pathname + location.search)
+    login(username, password)
+  }, [])
+
+  function submit(event) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    login(form.get('username'), form.get('password'))
   }
 
   return <main class="login-page">

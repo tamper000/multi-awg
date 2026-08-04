@@ -92,6 +92,7 @@ input::placeholder { color: #5f5f5c; }
 .credential { position: relative; margin: 12px 0; padding: 14px 16px; display: grid; gap: 5px; background: #101010; border: 1px solid #333; border-radius: 13px; }
 .credential small { color: var(--muted); }
 .credential .icon-button { position: absolute; right: 8px; top: 9px; }
+.credential-link strong { padding-right: 34px; overflow-wrap: anywhere; }
 
 .subscription-page { min-height: 100vh; background: radial-gradient(circle at 50% -10%, #2c2544 0, #0a0a0a 38%); }
 .sub-header { width: min(1180px, calc(100% - 48px)); height: 82px; margin: auto; display: flex; align-items: center; justify-content: space-between; }

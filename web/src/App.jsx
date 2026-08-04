@@ -30,6 +30,8 @@ export default function App() {
 
   const subscriptionToken = path.match(/^\/subscription\/([^/]+)$/)?.[1]
   if (subscriptionToken) return <Subscription token={subscriptionToken} user={user} />
+  const loginLink = path === '/login' && new URLSearchParams(location.hash.slice(1)).has('password')
+  if (loginLink) return <Login onLogin={(nextUser) => setUser(nextUser)} />
   if (!user || !session.token()) return <Login onLogin={(nextUser) => setUser(nextUser)} />
 
   if (user.role === 'admin') {

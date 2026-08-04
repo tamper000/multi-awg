@@ -14,6 +14,8 @@ export default function AdminDashboard({ user, onLogout }) {
   const [pwError, setPwError] = useState('')
   const [pwDone, setPwDone] = useState(false)
 
+  const loginLink = credentials && `${location.origin}/login#${new URLSearchParams({ username: credentials.username, password: credentials.password })}`
+
   async function load() {
     try { setUsers(await api('/api/admin/users')); setError('') } catch (err) { setError(err.message) }
   }
@@ -52,7 +54,7 @@ export default function AdminDashboard({ user, onLogout }) {
       </section>
     </>}
     {createOpen && <Modal title="Новый пользователь" onClose={() => setCreateOpen(false)}><p>Пароль будет создан автоматически и показан один раз.</p><form class="form-stack" onSubmit={create}><label>Логин<input name="username" required pattern="[A-Za-zА-Яа-яЁё0-9]+" placeholder="Например, alex" autoFocus /></label><label>Срок подписки, дней<input name="days" type="number" min="1" defaultValue="30" required /></label><button class="button button-primary button-wide"><Icon name="plus" /> Создать пользователя</button></form></Modal>}
-    {credentials && <Modal title="Пользователь создан" onClose={() => setCredentials(null)}><Notice kind="warning">Этот пароль показывается только сейчас. Передайте его пользователю.</Notice><div class="credential"><small>Логин</small><strong>{credentials.username}</strong></div><div class="credential"><small>Пароль</small><strong>{credentials.password}</strong><button class="icon-button" onClick={() => copyText(credentials.password, setCopied)}><Icon name="copy" /></button></div><button class="button button-primary button-wide" onClick={() => setCredentials(null)}>{copied ? 'Пароль скопирован' : 'Я сохранил пароль'}</button></Modal>}
+    {credentials && <Modal title="Пользователь создан" onClose={() => setCredentials(null)}><Notice kind="warning">Пароль и ссылка показываются только сейчас. Передайте их пользователю.</Notice><div class="credential"><small>Логин</small><strong>{credentials.username}</strong></div><div class="credential"><small>Пароль</small><strong>{credentials.password}</strong><button class="icon-button" onClick={() => copyText(credentials.password, setCopied)} aria-label="Скопировать пароль"><Icon name="copy" /></button></div><div class="credential credential-link"><small>Ссылка для автоматического входа</small><strong>{loginLink}</strong><button class="icon-button" onClick={() => copyText(loginLink, setCopied)} aria-label="Скопировать ссылку"><Icon name="copy" /></button></div><button class="button button-primary button-wide" onClick={() => setCredentials(null)}>{copied ? 'Скопировано' : 'Готово'}</button></Modal>}
     {pwOpen && <Modal title="Смена пароля" onClose={() => { setPwOpen(false); setPwError(''); setPwDone(false) }}><Notice>{pwError}</Notice>{pwDone ? <p class="pw-done">Пароль изменён.</p> : <form class="form-stack" onSubmit={changePassword}><label>Текущий пароль<input type="password" name="old" required autoFocus /></label><label>Новый пароль<input type="password" name="new" required /></label><button class="button button-primary button-wide">Сохранить пароль</button></form>}</Modal>}
   </Layout>
 }
