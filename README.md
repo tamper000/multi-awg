@@ -40,6 +40,11 @@ Frontend ──HTTP──► Backend (:8080) ──HTTP──► Worker (:9090)
 - `.env.server` — backend (см. `.env.server.example`): `DB_PATH`, `WORKER_URL`, `WORKER_TOKEN`, `JWT_SECRET`, `MAX_CONFIGS`
 - `.env.worker` — worker (см. `.env.worker.example`): `AUTH_TOKEN`, `SERVER_ENDPOINT`, `MIHOMO_TEMPLATE`
 
+### 5. Константные переменные
+- Название awg0.conf, переменная ListenPort
+- В proxy.toml переменные listen и backend
+- В config.yaml переменная device
+
 ## Запуск через docker-compose
 
 ```bash

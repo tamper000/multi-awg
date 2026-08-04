@@ -1,5 +1,6 @@
 .env.worker
 .env.server
+.env
 peers.json
 cache.db
 geoip.metadb
