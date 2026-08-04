@@ -46,7 +46,7 @@ services:
       start_period: "5s"
 
   awg-proxy:
-    build: ./awg-proxy
+    image: ghcr.io/tamper000/multi-awg-proxy:latest
     container_name: awg-proxy
     volumes:
       - ./awg-proxy/proxy.toml:/workdir/proxy.toml:ro
@@ -64,9 +64,7 @@ services:
       start_period: "5s"
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
+    image: ghcr.io/tamper000/multi-awg-worker:latest
     container_name: multi-awg-worker
     env_file:
       - .env.worker
@@ -80,9 +78,7 @@ services:
       - awg-proxy
 
   server:
-    build:
-      context: .
-      dockerfile: Dockerfile.server
+    image: ghcr.io/tamper000/multi-awg-server:latest
     container_name: multi-awg-server
     env_file:
       - .env.server
