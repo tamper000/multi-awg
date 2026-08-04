@@ -57,7 +57,3 @@ docker compose up
 
 - Backend: `go run ./cmd/server/`
 - Worker: `go run ./cmd/worker/`
-
-## Полезные ссылки
-
-Список приложений для импорта подписки clash — в `TODO.md`.
