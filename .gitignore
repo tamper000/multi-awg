@@ -12,4 +12,3 @@ node_modules/
 dist/
 
 TODO.md
-docker-compose.local.yml
