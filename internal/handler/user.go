@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"time"
 
@@ -70,7 +71,7 @@ func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 
 	daysLeft := -1
 	if user.ExpiresAt != nil {
-		daysLeft = int(time.Until(*user.ExpiresAt).Hours() / 24)
+		daysLeft = int(math.Ceil(time.Until(*user.ExpiresAt).Hours() / 24))
 		if daysLeft < 0 {
 			daysLeft = 0
 		}
