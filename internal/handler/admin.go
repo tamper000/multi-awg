@@ -217,9 +217,13 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _, err = h.worker.UnfreezePeers(r.Context(), names)
+	status, _, err := h.worker.UnfreezePeers(r.Context(), names)
 	if err != nil {
 		slog.Error("unfreeze peers", "names", names, "err", err)
+	} else if status < 400 {
+		if err := h.repo.SetFrozen(r.Context(), user.ID, false); err != nil {
+			slog.Error("set unfrozen", "userID", user.ID, "err", err)
+		}
 	}
 	writeJSON(w, 200, map[string]interface{}{
 		"username":   username,

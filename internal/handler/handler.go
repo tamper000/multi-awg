@@ -35,6 +35,7 @@ type UserRepo interface {
 	ListUsers(ctx context.Context) ([]models.User, error)
 	UpdateExpiry(ctx context.Context, username string, expiresAt *time.Time) error
 	UpdatePassword(ctx context.Context, id int64, plainPassword string) error
+	SetFrozen(ctx context.Context, id int64, frozen bool) error
 }
 
 type SessionRepo interface {

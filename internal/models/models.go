@@ -7,6 +7,7 @@ type User struct {
 	Username     string     `db:"username" json:"username"`
 	Role         string     `db:"role" json:"role"`
 	ExpiresAt    *time.Time `db:"expires_at" json:"expires_at"`
+	Frozen       bool       `db:"frozen" json:"frozen"`
 	PasswordHash string     `db:"password_hash" json:"-"`
 	CreatedAt    time.Time  `db:"created_at" goqu:"skipinsert" json:"created_at"`
 }

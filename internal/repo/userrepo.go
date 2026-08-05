@@ -102,6 +102,17 @@ func (r *UserRepo) UpdatePassword(ctx context.Context, id int64, plainPassword s
 	return nil
 }
 
+// SetFrozen ставит метку заморозки (true = подписка истекла и конфиги заморожены).
+func (r *UserRepo) SetFrozen(ctx context.Context, id int64, frozen bool) error {
+	_, err := r.db.Update(db.UsersTable).Set(
+		goqu.Record{"frozen": frozen},
+	).Where(goqu.C("id").Eq(id)).Executor().ExecContext(ctx)
+	if err != nil {
+		return fmt.Errorf("set frozen: %w", err)
+	}
+	return nil
+}
+
 func (r *UserRepo) ListUsers(ctx context.Context) ([]models.User, error) {
 	var users []models.User
 	if err := r.db.From(db.UsersTable).
