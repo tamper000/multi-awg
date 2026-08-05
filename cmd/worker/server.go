@@ -66,7 +66,6 @@ func (s *Server) Handler() http.Handler {
 		r.Get("/api/peers/{name}/config", s.getPeerConfig)
 		r.Get("/api/peers/{name}/stats", s.getPeerStats)
 		r.Get("/api/peers/{name}/sub", s.getPeerSub)
-		r.Delete("/api/peers/{name}", s.deletePeer)
 		r.Get("/api/stats", s.getStats)
 		r.Post("/api/sync", s.handleSync)
 	})
@@ -395,10 +394,6 @@ func shortPeerName(name string) string {
 		return after
 	}
 	return name
-}
-
-func (s *Server) deletePeer(w http.ResponseWriter, r *http.Request) {
-	s.removePeers(w, r, []string{chi.URLParam(r, "name")})
 }
 
 func (s *Server) deletePeers(w http.ResponseWriter, r *http.Request) {
