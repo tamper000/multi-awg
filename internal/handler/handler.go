@@ -1,20 +1,18 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/tamper000/multi-awg/internal/auth"
-	"github.com/tamper000/multi-awg/internal/repo"
-	"github.com/tamper000/multi-awg/internal/worker"
+	"github.com/tamper000/multi-awg/internal/models"
 )
 
 // Config — from env
 type Config struct {
-	WorkerURL  string
-	Token      string
 	JWTSecret  string
 	TokenTTL   time.Duration
 	MaxConfigs int
@@ -22,15 +20,53 @@ type Config struct {
 }
 
 type Handler struct {
-	repo     *repo.UserRepo
-	peers    *repo.PeerRepo
-	sessions *repo.SessionRepo
-	worker   *worker.Client
+	repo     UserRepo
+	peers    PeerRepo
+	sessions SessionRepo
+	worker   WorkerClient
 	config   Config
 	tokens   *auth.TokenService
 }
 
-func New(users *repo.UserRepo, sessions *repo.SessionRepo, peers *repo.PeerRepo, cfg Config) *Handler {
+type UserRepo interface {
+	CreateUser(ctx context.Context, username string, plainPassword string, role string, expiresAt *time.Time) error
+	DeleteUser(ctx context.Context, username string) error
+	GetByUsername(ctx context.Context, username string) (*models.User, error)
+	ListUsers(ctx context.Context) ([]models.User, error)
+	UpdateExpiry(ctx context.Context, username string, expiresAt *time.Time) error
+	UpdatePassword(ctx context.Context, id int64, plainPassword string) error
+}
+
+type SessionRepo interface {
+	CreateSession(ctx context.Context, userID int64, jti string, expiresAt time.Time) error
+	DeleteSession(ctx context.Context, jti string) error
+	SessionExists(ctx context.Context, jti string) (bool, error)
+}
+
+type PeerRepo interface {
+	CreatePeer(ctx context.Context, userID int64, name string, peerName string) (string, error)
+	DeleteByName(ctx context.Context, userID int64, name string) error
+	GetBySubToken(ctx context.Context, token string) (*models.Peer, error)
+	GetByUserAndName(ctx context.Context, userID int64, name string) (*models.Peer, error)
+	ListByUser(ctx context.Context, userID int64) ([]models.Peer, error)
+	ListNamesByUser(ctx context.Context, userID int64) ([]string, error)
+}
+
+type WorkerClient interface {
+	CreatePeer(ctx context.Context, name string) (int, interface{}, error)
+	DeletePeer(ctx context.Context, name string) (int, interface{}, error)
+	DeletePeers(ctx context.Context, names []string) (int, interface{}, error)
+	FreezePeers(ctx context.Context, names []string) (int, interface{}, error)
+	GetPeerConfig(ctx context.Context, name string) (int, interface{}, error)
+	GetPeerSub(ctx context.Context, name string) (int, interface{}, error)
+	GetPeerStats(ctx context.Context, name string) (int, interface{}, error)
+	GetStats(ctx context.Context) (int, interface{}, error)
+	Sync(ctx context.Context) (int, interface{}, error)
+	UnfreezePeers(ctx context.Context, names []string) (int, interface{}, error)
+}
+
+func New(users UserRepo, sessions SessionRepo, peers PeerRepo, worker WorkerClient,
+	cfg Config) *Handler {
 	if cfg.TokenTTL == 0 {
 		cfg.TokenTTL = 24 * time.Hour
 	}
@@ -41,7 +77,7 @@ func New(users *repo.UserRepo, sessions *repo.SessionRepo, peers *repo.PeerRepo,
 		repo:     users,
 		peers:    peers,
 		sessions: sessions,
-		worker:   worker.New(cfg.WorkerURL, cfg.Token),
+		worker:   worker,
 		config:   cfg,
 		tokens:   auth.NewTokenService(cfg.JWTSecret, cfg.TokenTTL),
 	}

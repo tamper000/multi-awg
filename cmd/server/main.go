@@ -13,7 +13,9 @@ import (
 	"github.com/tamper000/multi-awg/internal/db"
 	"github.com/tamper000/multi-awg/internal/handler"
 	userrepo "github.com/tamper000/multi-awg/internal/repo"
+	"github.com/tamper000/multi-awg/internal/service"
 	"github.com/tamper000/multi-awg/internal/utils"
+	"github.com/tamper000/multi-awg/internal/worker"
 )
 
 func main() {
@@ -36,22 +38,28 @@ func main() {
 		slog.Error("ensure default admin", "err", err)
 		os.Exit(1)
 	}
+	wrk := worker.New(
+		utils.GetEnv("WORKER_URL", "http://127.0.0.1:9090"),
+		utils.GetEnv("WORKER_TOKEN", "secret123"),
+	)
 
-	h := handler.New(userRepo, sessionRepo, peerRepo, handler.Config{
-		WorkerURL:  utils.GetEnv("WORKER_URL", "http://127.0.0.1:9090"),
-		Token:      utils.GetEnv("WORKER_TOKEN", "secret123"),
-		JWTSecret:  utils.GetEnv("JWT_SECRET", "bd4dd1db95e05071a2182ff76bedf5162aebe6f17e506e3b39698cf106b7c371"),
-		TokenTTL:   24 * time.Hour,
-		MaxConfigs: utils.GetEnvInt("MAX_CONFIGS", 5),
-		StaticDir:  utils.GetEnv("STATIC_DIR", "web/dist"),
-	})
+	srv := service.New(userRepo, peerRepo, wrk)
+	go srv.Start(ctx)
+
+	h := handler.New(userRepo, sessionRepo, peerRepo, wrk,
+		handler.Config{
+			JWTSecret:  utils.GetEnv("JWT_SECRET", "bd4dd1db95e05071a2182ff76bedf5162aebe6f17e506e3b39698cf106b7c371"),
+			TokenTTL:   24 * time.Hour,
+			MaxConfigs: utils.GetEnvInt("MAX_CONFIGS", 5),
+			StaticDir:  utils.GetEnv("STATIC_DIR", "web/dist"),
+		})
 
 	addr := utils.GetEnv("ADDR", ":8080")
-	srv := &http.Server{Addr: addr, Handler: h.Routes()}
+	server := &http.Server{Addr: addr, Handler: h.Routes()}
 
 	go func() {
 		slog.Info("server listening", "addr", addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("listen", "err", err)
 			os.Exit(1)
 		}
@@ -62,7 +70,7 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown", "err", err)
 	}
 }

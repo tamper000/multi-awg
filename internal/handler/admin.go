@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.repo.ListUsers(r.Context())
 	if err != nil {
+		fmt.Println(err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -186,6 +188,23 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
+	}
+
+	user, err := h.repo.GetByUsername(r.Context(), username)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+
+	names, err := h.peers.ListNamesByUser(r.Context(), user.ID)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+
+	_, _, err = h.worker.UnfreezePeers(r.Context(), names)
+	if err != nil {
+		// slog error
 	}
 	writeJSON(w, 200, map[string]interface{}{
 		"username":   username,
