@@ -102,6 +102,17 @@ func (r *UserRepo) UpdatePassword(ctx context.Context, id int64, plainPassword s
 	return nil
 }
 
+// SetFrozen ставит метку заморозки (true = подписка истекла и конфиги заморожены).
+func (r *UserRepo) SetFrozen(ctx context.Context, id int64, frozen bool) error {
+	_, err := r.db.Update(db.UsersTable).Set(
+		goqu.Record{"frozen": frozen},
+	).Where(goqu.C("id").Eq(id)).Executor().ExecContext(ctx)
+	if err != nil {
+		return fmt.Errorf("set frozen: %w", err)
+	}
+	return nil
+}
+
 func (r *UserRepo) ListUsers(ctx context.Context) ([]models.User, error) {
 	var users []models.User
 	if err := r.db.From(db.UsersTable).
@@ -112,9 +123,9 @@ func (r *UserRepo) ListUsers(ctx context.Context) ([]models.User, error) {
 	return users, nil
 }
 
-func (r *UserRepo) DeleteUser(ctx context.Context, username string) error {
+func (r *UserRepo) DeleteUser(ctx context.Context, id int64) error {
 	res, err := r.db.Delete(db.UsersTable).
-		Where(goqu.C("username").Eq(username)).
+		Where(goqu.C("id").Eq(id)).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return fmt.Errorf("delete user: %w", err)
@@ -131,10 +142,10 @@ func (r *UserRepo) DeleteUser(ctx context.Context, username string) error {
 
 // UpdateExpiry обновляет expires_at пользователя, возвращает ErrNotFound,
 // если пользователь не найден.
-func (r *UserRepo) UpdateExpiry(ctx context.Context, username string, expiresAt *time.Time) error {
+func (r *UserRepo) UpdateExpiry(ctx context.Context, id int64, expiresAt *time.Time) error {
 	res, err := r.db.Update(db.UsersTable).Set(
 		goqu.Record{"expires_at": expiresAt},
-	).Where(goqu.C("username").Eq(username)).Executor().ExecContext(ctx)
+	).Where(goqu.C("id").Eq(id)).Executor().ExecContext(ctx)
 	if err != nil {
 		return fmt.Errorf("update expiry: %w", err)
 	}

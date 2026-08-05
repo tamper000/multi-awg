@@ -183,3 +183,57 @@ func (c *Client) deletePeers(ctx context.Context, names []string) (int, interfac
 	}
 	return resp.StatusCode, status, nil
 }
+
+func (c *Client) FreezePeers(ctx context.Context, names []string) (int, interface{}, error) {
+	body, err := json.Marshal(map[string][]string{"names": names})
+	if err != nil {
+		return 0, nil, err
+	}
+	resp, err := c.do(ctx, http.MethodPost, "/api/peers/freeze", bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		var e Error
+		_ = json.NewDecoder(resp.Body).Decode(&e)
+		return resp.StatusCode, e, nil
+	}
+
+	var response struct {
+		Status string `json:"status"`
+		Count  string `json:"count"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return 0, nil, fmt.Errorf("decode worker response: %w", err)
+	}
+	return resp.StatusCode, response, nil
+}
+
+func (c *Client) UnfreezePeers(ctx context.Context, names []string) (int, interface{}, error) {
+	body, err := json.Marshal(map[string][]string{"names": names})
+	if err != nil {
+		return 0, nil, err
+	}
+	resp, err := c.do(ctx, http.MethodPost, "/api/peers/unfreeze", bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		var e Error
+		_ = json.NewDecoder(resp.Body).Decode(&e)
+		return resp.StatusCode, e, nil
+	}
+
+	var response struct {
+		Status string `json:"status"`
+		Count  string `json:"count"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return 0, nil, fmt.Errorf("decode worker response: %w", err)
+	}
+	return resp.StatusCode, response, nil
+}

@@ -11,7 +11,6 @@ export default function AdminDashboard({ user, onLogout }) {
   const [credentials, setCredentials] = useState(null)
   const [copied, setCopied] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
-  const [pwError, setPwError] = useState('')
   const [pwDone, setPwDone] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
@@ -30,17 +29,17 @@ export default function AdminDashboard({ user, onLogout }) {
     try {
       const result = await api('/api/admin/users', { method: 'POST', body: jsonBody({ username: form.get('username'), days: Number(form.get('days')) }) })
       setCreateOpen(false); setCredentials(result); load()
-    } catch (err) { setError(err.message) }
+    } catch {}
   }
 
   async function changePassword(event) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    setPwError(''); setPwDone(false)
+    setPwDone(false)
     try {
       await api('/api/user/password', { method: 'POST', body: jsonBody({ old: form.get('old'), new: form.get('new') }) })
       setPwDone(true)
-    } catch (err) { setPwError(err.message === 'invalid credentials' ? 'Неверный текущий пароль' : err.message) }
+    } catch {}
   }
 
   async function sync() {
@@ -62,12 +61,12 @@ export default function AdminDashboard({ user, onLogout }) {
       <section class="section-block"><div class="section-title"><div><h2>Список пользователей</h2><p>Откройте профиль для статистики и управления</p></div><button class="button button-ghost" onClick={() => setPwOpen(true)}><Icon name="key" /> Сменить пароль</button></div>
         {!clients.length ? <Empty title="Пользователей пока нет" text="Добавьте первого пользователя и передайте ему созданный пароль." /> : <div class="user-table"><div class="table-row table-head"><span>Пользователь</span><span>Статус</span><span>Подписка до</span><span>Создан</span><span /></div>{clients.map((item) => {
           const isActive = !item.expires_at || new Date(item.expires_at) > new Date()
-          return <button class="table-row" onClick={() => navigate(`/admin/users/${encodeURIComponent(item.username)}`)} key={item.id}><span class="user-cell"><b>{item.username[0].toUpperCase()}</b><strong>{item.username}</strong></span><span><i class={`status ${isActive ? 'active' : 'expired'}`}>{isActive ? 'Активна' : 'Истекла'}</i></span><span>{formatDate(item.expires_at)}</span><span>{formatDate(item.created_at)}</span><span class="row-arrow"><Icon name="arrow" /></span></button>
+          return <button class="table-row" onClick={() => navigate(`/admin/users/${item.id}`)} key={item.id}><span class="user-cell"><b>{item.username[0].toUpperCase()}</b><strong>{item.username}</strong></span><span><i class={`status ${isActive ? 'active' : 'expired'}`}>{isActive ? 'Активна' : 'Истекла'}</i></span><span>{formatDate(item.expires_at)}</span><span>{formatDate(item.created_at)}</span><span class="row-arrow"><Icon name="arrow" /></span></button>
         })}</div>}
       </section>
     </>}
     {createOpen && <Modal title="Новый пользователь" onClose={() => setCreateOpen(false)}><p>Пароль будет создан автоматически и показан один раз.</p><form class="form-stack" onSubmit={create}><label>Логин<input name="username" required pattern="[A-Za-zА-Яа-яЁё0-9]+" placeholder="Например, alex" autoFocus /></label><label>Срок подписки, дней<input name="days" type="number" min="1" defaultValue="30" required /></label><button class="button button-primary button-wide"><Icon name="plus" /> Создать пользователя</button></form></Modal>}
     {credentials && <Modal title="Пользователь создан" onClose={() => setCredentials(null)}><Notice kind="warning">Пароль и ссылка показываются только сейчас. Передайте их пользователю.</Notice><div class="credential"><small>Логин</small><strong>{credentials.username}</strong></div><div class="credential"><small>Пароль</small><strong>{credentials.password}</strong><button class="icon-button" onClick={() => copyText(credentials.password, setCopied)} aria-label="Скопировать пароль"><Icon name="copy" /></button></div><div class="credential credential-link"><small>Ссылка для автоматического входа</small><strong>{loginLink}</strong><button class="icon-button" onClick={() => copyText(loginLink, setCopied)} aria-label="Скопировать ссылку"><Icon name="copy" /></button></div><button class="button button-primary button-wide" onClick={() => setCredentials(null)}>{copied ? 'Скопировано' : 'Готово'}</button></Modal>}
-    {pwOpen && <Modal title="Смена пароля" onClose={() => { setPwOpen(false); setPwError(''); setPwDone(false) }}><Notice>{pwError}</Notice>{pwDone ? <p class="pw-done">Пароль изменён.</p> : <form class="form-stack" onSubmit={changePassword}><label>Текущий пароль<input type="password" name="old" required autoFocus /></label><label>Новый пароль<input type="password" name="new" required /></label><button class="button button-primary button-wide">Сохранить пароль</button></form>}</Modal>}
+    {pwOpen && <Modal title="Смена пароля" onClose={() => { setPwOpen(false); setPwDone(false) }}>{pwDone ? <p class="pw-done">Пароль изменён.</p> : <form class="form-stack" onSubmit={changePassword}><label>Текущий пароль<input type="password" name="old" required autoFocus /></label><label>Новый пароль<input type="password" name="new" required /></label><button class="button button-primary button-wide">Сохранить пароль</button></form>}</Modal>}
   </Layout>
 }

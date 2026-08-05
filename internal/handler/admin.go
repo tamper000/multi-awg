@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +18,7 @@ import (
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.repo.ListUsers(r.Context())
 	if err != nil {
+		slog.Error("list users", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -44,17 +47,20 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 409, map[string]string{"error": "username already exists"})
 		return
 	} else if !errors.Is(err, repo.ErrNotFound) {
+		slog.Error("get user by username", "username", req.Username, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 
 	plain, err := password.Generate(16)
 	if err != nil {
+		slog.Error("generate password", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	expiresAt := time.Now().Add(time.Duration(req.Days) * 24 * time.Hour)
 	if err := h.repo.CreateUser(r.Context(), req.Username, plain, repo.RoleUser, &expiresAt); err != nil {
+		slog.Error("create user", "username", req.Username, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -67,12 +73,17 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
-	user, err := h.repo.GetByUsername(r.Context(), username)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, 400, map[string]string{"error": "invalid user id"})
+		return
+	}
+	user, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
+			slog.Error("get user by id", "userID", id, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -80,6 +91,7 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 
 	peers, err := h.peers.ListByUser(r.Context(), user.ID)
 	if err != nil {
+		slog.Error("list peers", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -87,10 +99,12 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 	statsByName := map[string]worker.Stats{}
 	status, body, err := h.worker.GetStats(r.Context())
 	if err != nil {
+		slog.Error("get stats from worker", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status >= 400 {
+		slog.Error("get stats from worker", "status", status, "body", body)
 		writeJSON(w, status, body)
 		return
 	}
@@ -123,13 +137,18 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, 400, map[string]string{"error": "invalid user id"})
+		return
+	}
 
-	user, err := h.repo.GetByUsername(r.Context(), username)
+	user, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
+			slog.Error("get user by id", "userID", id, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -137,25 +156,29 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	names, err := h.peers.ListNamesByUser(r.Context(), user.ID)
 	if err != nil {
+		slog.Error("list peer names", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if len(names) > 0 {
 		status, body, err := h.worker.DeletePeers(r.Context(), names)
 		if err != nil {
+			slog.Error("delete peers on worker", "names", names, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 			return
 		}
 		if status >= 400 {
+			slog.Error("delete peers on worker", "status", status, "body", body)
 			writeJSON(w, status, body)
 			return
 		}
 	}
 
-	if err := h.repo.DeleteUser(r.Context(), username); err != nil {
+	if err := h.repo.DeleteUser(r.Context(), user.ID); err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
+			slog.Error("delete user", "userID", user.ID, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -164,7 +187,11 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, 400, map[string]string{"error": "invalid user id"})
+		return
+	}
 
 	var req struct {
 		Days int `json:"days"`
@@ -178,17 +205,45 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresAt := time.Now().Add(time.Duration(req.Days) * 24 * time.Hour)
-	if err := h.repo.UpdateExpiry(r.Context(), username, &expiresAt); err != nil {
+	user, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
+			slog.Error("get user by id", "userID", id, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
 	}
+
+	expiresAt := time.Now().Add(time.Duration(req.Days) * 24 * time.Hour)
+	if err := h.repo.UpdateExpiry(r.Context(), id, &expiresAt); err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			writeJSON(w, 404, map[string]string{"error": "user not found"})
+		} else {
+			slog.Error("update expiry", "userID", id, "err", err)
+			writeJSON(w, 500, map[string]string{"error": "internal error"})
+		}
+		return
+	}
+
+	names, err := h.peers.ListNamesByUser(r.Context(), user.ID)
+	if err != nil {
+		slog.Error("list peer names", "userID", user.ID, "err", err)
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+
+	status, _, err := h.worker.UnfreezePeers(r.Context(), names)
+	if err != nil {
+		slog.Error("unfreeze peers", "names", names, "err", err)
+	} else if status < 400 {
+		if err := h.repo.SetFrozen(r.Context(), user.ID, false); err != nil {
+			slog.Error("set unfrozen", "userID", user.ID, "err", err)
+		}
+	}
 	writeJSON(w, 200, map[string]interface{}{
-		"username":   username,
+		"username":   user.Username,
 		"expires_at": expiresAt,
 	})
 }
@@ -196,10 +251,12 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) syncWorker(w http.ResponseWriter, r *http.Request) {
 	status, body, err := h.worker.Sync(r.Context())
 	if err != nil {
+		slog.Error("sync worker", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status >= 400 {
+		slog.Error("sync worker", "status", status, "body", body)
 		writeJSON(w, status, body)
 		return
 	}

@@ -9,8 +9,6 @@ export default function UserPanel({ user, onLogout }) {
   const [configs, setConfigs] = useState(null)
   const [error, setError] = useState('')
   const [modal, setModal] = useState('')
-  const [createError, setCreateError] = useState('')
-  const [pwError, setPwError] = useState('')
   const [pwDone, setPwDone] = useState(false)
 
   async function load() {
@@ -28,28 +26,28 @@ export default function UserPanel({ user, onLogout }) {
     try {
       const created = await api('/api/user/configs', { method: 'POST', body: jsonBody({ name: form.get('name') }) })
       setModal(''); navigate(`/subscription/${created.sub_token}`)
-    } catch (err) { setCreateError(err.message) }
+    } catch {}
   }
 
   async function remove(name) {
     if (!confirm(`Удалить конфиг «${name}»? Ссылка подписки перестанет работать.`)) return
-    try { await api(`/api/user/configs/${encodeURIComponent(name)}`, { method: 'DELETE' }); load() } catch (err) { setError(err.message) }
+    try { await api(`/api/user/configs/${encodeURIComponent(name)}`, { method: 'DELETE' }); load() } catch {}
   }
 
   async function changePassword(event) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    setPwError(''); setPwDone(false)
+    setPwDone(false)
     try {
       await api('/api/user/password', { method: 'POST', body: jsonBody({ old: form.get('old'), new: form.get('new') }) })
       setPwDone(true)
-    } catch (err) { setPwError(err.message === 'invalid credentials' ? 'Неверный текущий пароль' : err.message) }
+    } catch {}
   }
 
   const expired = info?.days_left === 0
   return <Layout user={user} onLogout={onLogout} title={`Привет, ${user.username}`} subtitle="Ваши защищённые подключения в одном месте" action={<button class="button button-primary" onClick={() => setModal('create')} disabled={expired}><Icon name="plus" /> Новый конфиг</button>}>
     <Notice>{error}</Notice>
-    {expired && <Notice kind="warning">Подписка закончилась. Существующие конфиги доступны, но создать новый пока нельзя.</Notice>}
+    {expired && <Notice kind="warning">Подписка истекла: существующие конфиги заморожены, новые создать нельзя.</Notice>}
     {!info || !configs ? <Loader /> : <>
       <section class="stats-grid">
         <article class="stat-card accent-lime"><small>Подписка</small><strong>{info.days_left < 0 ? 'Без срока' : `${info.days_left} дн.`}</strong><span>{formatDate(info.expires_at)}</span></article>
@@ -64,12 +62,9 @@ export default function UserPanel({ user, onLogout }) {
         </article>)}</div>}
       </section>
     </>}
-    {modal === 'create' && <Modal title="Новый конфиг" onClose={() => setModal('')}>{createError ? <>
-      <Notice>{createError === 'config limit reached' ? 'Достигнут лимит конфигов' : createError}</Notice>
-      <button class="button button-primary button-wide" onClick={() => setModal('')}>Закрыть</button>
-    </> : <>
+    {modal === 'create' && <Modal title="Новый конфиг" onClose={() => setModal('')}>
       <p>Назовите устройство, чтобы потом легко его узнать.</p><form class="form-stack" onSubmit={create}><label>Название<input name="name" required pattern="[A-Za-zА-Яа-яЁё0-9]+" placeholder="Например, Телефон" autoFocus /></label><button class="button button-primary button-wide"><Icon name="plus" /> Создать подключение</button></form>
-    </>}</Modal>}
-    {modal === 'password' && <Modal title="Смена пароля" onClose={() => { setModal(''); setPwError(''); setPwDone(false) }}><Notice>{pwError}</Notice>{pwDone ? <p class="pw-done">Пароль изменён.</p> : <form class="form-stack" onSubmit={changePassword}><label>Текущий пароль<input type="password" name="old" required autoFocus /></label><label>Новый пароль<input type="password" name="new" required /></label><button class="button button-primary button-wide">Сохранить пароль</button></form>}</Modal>}
+    </Modal>}
+    {modal === 'password' && <Modal title="Смена пароля" onClose={() => { setModal(''); setPwDone(false) }}>{pwDone ? <p class="pw-done">Пароль изменён.</p> : <form class="form-stack" onSubmit={changePassword}><label>Текущий пароль<input type="password" name="old" required autoFocus /></label><label>Новый пароль<input type="password" name="new" required /></label><button class="button button-primary button-wide">Сохранить пароль</button></form>}</Modal>}
   </Layout>
 }

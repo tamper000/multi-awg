@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -29,12 +30,19 @@ func (h *Handler) authMiddleware(next http.Handler) http.Handler {
 
 		claims, err := h.tokens.Parse(strings.TrimPrefix(header, "Bearer "))
 		if err != nil {
+			slog.Debug("parse token", "err", err)
 			writeJSON(w, 401, map[string]string{"error": "unauthorized"})
 			return
 		}
 
 		exists, err := h.sessions.SessionExists(r.Context(), claims.JTI)
-		if err != nil || !exists {
+		if err != nil {
+			slog.Error("session exists", "jti", claims.JTI, "err", err)
+			writeJSON(w, 401, map[string]string{"error": "unauthorized"})
+			return
+		}
+		if !exists {
+			slog.Debug("session not found", "jti", claims.JTI)
 			writeJSON(w, 401, map[string]string{"error": "unauthorized"})
 			return
 		}
@@ -49,6 +57,7 @@ func (h *Handler) adminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := ClaimsFromContext(r.Context())
 		if !ok || claims.Role != repo.RoleAdmin {
+			slog.Debug("admin access denied", "role", claims.Role)
 			writeJSON(w, 403, map[string]string{"error": "forbidden"})
 			return
 		}

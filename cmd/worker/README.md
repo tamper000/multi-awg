@@ -13,12 +13,15 @@ go run ./cmd/worker/
 
 Сервер стартует на `:9090`.
 
+Сервер слушает `:9090` (порт захардкожен).
+
 ## Переменные окружения
 
 | Переменная | По умолчанию | Описание |
 |-----------|-------------|----------|
-| `PORT` | `9090` | Порт HTTP API |
 | `AUTH_TOKEN` | (пусто) | Токен авторизации. Если не задан — авторизация отключена |
+| `SERVER_ENDPOINT` | (пусто) | Адрес сервера (`host:port`) для генерации клиентских конфигов |
+| `MIHOMO_TEMPLATE` | (пусто) | Путь к шаблону mihomo YAML для `.../sub` |
 
 ## API
 
@@ -100,15 +103,72 @@ curl http://localhost:9090/api/peers/my-phone/config \
 }
 ```
 
-### Удалить пир
+### Удалить пиры (батчем)
 
 ```bash
-curl -X DELETE http://localhost:9090/api/peers/my-phone \
-  -H "Authorization: Bearer $AUTH_TOKEN"
+curl -X DELETE http://localhost:9090/api/peers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -d '{"names": ["my-phone", "laptop"]}'
 ```
 
 ```json
 {"status": "deleted"}
+```
+
+Если ни один из указанных пиров не найден — 404:
+
+```json
+{"error": "peer not found"}
+```
+
+### Заморозить / разморозить пиры
+
+Пир остаётся в списке, но его `[Peer]`-секция убирается из активного конфига (трафик замораживается).
+
+```bash
+curl -X POST http://localhost:9090/api/peers/freeze \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -d '{"names": ["my-phone"]}'
+```
+
+```json
+{"status": "frozen", "count": "1"}
+```
+
+Разморозка — тот же запрос на `/api/peers/unfreeze`, ответ `{"status": "unfrozen", "count": "1"}`. Если ни один пир не найден — 404.
+
+### Подписка пира (конфиг + mihomo)
+
+Отдаёт клиентский конфиг, vpn-ссылку и mihomo YAML (из `MIHOMO_TEMPLATE`):
+
+```bash
+curl http://localhost:9090/api/peers/my-phone/sub \
+  -H "Authorization: Bearer $AUTH_TOKEN"
+```
+
+```json
+{
+  "conf": "[Interface]\nPrivateKey = ...",
+  "vpn_link": "amneziawg://...",
+  "mihomo_yaml": "mixed-port: 7890\n..."
+}
+```
+
+Если пир не найден — 404, при ошибке чтения mihomo-шаблона поле `mihomo_yaml` будет пустым.
+
+### Принудительная синхронизация
+
+Перечитывает конфиг и применяет изменения (`awg syncconf`):
+
+```bash
+curl -X POST http://localhost:9090/api/sync \
+  -H "Authorization: Bearer $AUTH_TOKEN"
+```
+
+```json
+{"status": "synced"}
 ```
 
 ### Статистика всех пиров

@@ -352,6 +352,78 @@ func removePeerFromConfig(confPath, publicKey string) error {
 	return os.WriteFile(confPath, []byte(strings.Join(result, "\n")), 0644)
 }
 
+func setPeersFrozen(confPath, confDir string, names []string, frozen bool) (int, error) {
+	peers, err := loadPeers(confDir)
+	if err != nil {
+		return 0, err
+	}
+
+	want := make(map[string]bool, len(names))
+	for _, n := range names {
+		want[n] = true
+	}
+	pubKeys := make(map[string]bool)
+	matched := 0
+	for _, p := range peers {
+		if want[p.Name] {
+			pubKeys[p.PublicKey] = true
+			matched++
+		}
+	}
+
+	data, err := os.ReadFile(confPath)
+	if err != nil {
+		return 0, err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var curPub string
+	changed := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[Peer]" {
+			curPub = ""
+			continue
+		}
+
+		comment := ""
+		content := trimmed
+		if strings.HasPrefix(content, "#") {
+			comment = "#"
+			content = strings.TrimSpace(strings.TrimPrefix(content, "#"))
+		} else if strings.HasPrefix(content, ";") {
+			comment = ";"
+			content = strings.TrimSpace(strings.TrimPrefix(content, ";"))
+		}
+
+		if k, v, ok := parseKV(content); ok && k == "PublicKey" {
+			curPub = v
+			continue
+		}
+		if curPub == "" || !pubKeys[curPub] {
+			continue
+		}
+
+		if k, _, ok := parseKV(content); ok && k == "AllowedIPs" {
+			isFrozen := comment != ""
+			if isFrozen == frozen {
+				continue
+			}
+			if frozen {
+				lines[i] = "#" + line
+			} else {
+				lines[i] = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "#"), ";"))
+			}
+			changed = true
+		}
+	}
+
+	if !changed {
+		return matched, nil
+	}
+	return matched, os.WriteFile(confPath, []byte(strings.Join(lines, "\n")), 0644)
+}
+
 // --- Client config generation ---
 
 func generateClientConfig(privateKey, serverPubKey, ip, dns, endpoint, amneziaParams string) string {

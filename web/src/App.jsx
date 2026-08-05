@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { session } from './api.js'
+import { Toast } from './ui.jsx'
 import Login from './pages/Login.jsx'
 import UserPanel from './pages/UserPanel.jsx'
 import Subscription from './pages/Subscription.jsx'
@@ -29,15 +30,15 @@ export default function App() {
   }, [])
 
   const subscriptionToken = path.match(/^\/subscription\/([^/]+)$/)?.[1]
-  if (subscriptionToken) return <Subscription token={subscriptionToken} user={user} />
+  if (subscriptionToken) return <><Subscription token={subscriptionToken} user={user} /><Toast /></>
   const loginLink = path === '/login' && new URLSearchParams(location.hash.slice(1)).has('password')
-  if (loginLink) return <Login onLogin={(nextUser) => setUser(nextUser)} />
-  if (!user || !session.token()) return <Login onLogin={(nextUser) => setUser(nextUser)} />
+  if (loginLink) return <><Login onLogin={(nextUser) => setUser(nextUser)} /><Toast /></>
+  if (!user || !session.token()) return <><Login onLogin={(nextUser) => setUser(nextUser)} /><Toast /></>
 
   if (user.role === 'admin') {
-    const username = path.match(/^\/admin\/users\/([^/]+)$/)?.[1]
-    if (username) return <AdminUser username={decodeURIComponent(username)} user={user} />
-    return <AdminDashboard user={user} onLogout={() => setUser(null)} />
+    const userID = path.match(/^\/admin\/users\/(\d+)$/)?.[1]
+    if (userID) return <><AdminUser userID={userID} user={user} /><Toast /></>
+    return <><AdminDashboard user={user} onLogout={() => setUser(null)} /><Toast /></>
   }
-  return <UserPanel user={user} onLogout={() => setUser(null)} />
+  return <><UserPanel user={user} onLogout={() => setUser(null)} /><Toast /></>
 }
