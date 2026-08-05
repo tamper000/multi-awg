@@ -22,9 +22,11 @@ func generateMihomoConfig(config *MihomoConfig, peer *Peer, serverPubKey, endpoi
 	proxy.PrivateKey = peer.PrivateKey
 	proxy.PublicKey = serverPubKey
 
-	ip, port, _ := strings.Cut(endpoint, ":")
-	proxy.IP = ip
-	proxy.Port = port
+	serverIP, serverPort, _ := strings.Cut(endpoint, ":")
+	proxy.Server = serverIP
+	proxy.Port = serverPort
+
+	proxy.IP = peer.IP
 
 	// AmneziaWG params
 	params := proxy.AmneziaWGOption
@@ -56,10 +58,26 @@ func generateMihomoConfig(config *MihomoConfig, peer *Peer, serverPubKey, endpoi
 	params.KeepaliveTimeout = iface["KeepaliveTimeout"]
 	params.MaxHandshakeAttempts = iface["MaxHandshakeAttempts"]
 
+	if isNotEmpty(params.HeaderProtectionKey, params.ContentPaddingAddition,
+		params.RekeyAfterTime, params.RekeyTimeout,
+		params.RejectAfterTime, params.KeepaliveTimeout,
+		params.MaxHandshakeAttempts) {
+		params.Version = "3"
+	}
+
 	for i := range config.ProxyGroups {
 		config.ProxyGroups[i].Proxies = []string{proxy.Name}
 	}
 
 	data, err := yaml.Marshal(config)
 	return string(data), err
+}
+
+func isNotEmpty(strs ...string) bool {
+	for _, s := range strs {
+		if s == "" {
+			return false
+		}
+	}
+	return true
 }
