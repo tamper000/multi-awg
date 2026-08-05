@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/goccy/go-yaml"
 )
 
 type Server struct {
@@ -375,10 +376,15 @@ func (s *Server) getPeerSub(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("read mihomo template", "err", err)
 	} else {
-		mihomoYaml, err = generateMihomoConfig(string(tmpl), shortPeerName(peer.Name), peer, serverPubKey, s.serverEndpoint, iface)
-		if err != nil {
-			slog.Error("generate mihomo config", "err", err)
-			mihomoYaml = ""
+		var mihomoCfg MihomoConfig
+		if err := yaml.Unmarshal(tmpl, &mihomoCfg); err != nil {
+			slog.Error("parse mihomo template", "err", err)
+		} else {
+			mihomoYaml, err = generateMihomoConfig(&mihomoCfg, peer, serverPubKey, s.serverEndpoint, iface)
+			if err != nil {
+				slog.Error("generate mihomo config", "err", err)
+				mihomoYaml = ""
+			}
 		}
 	}
 

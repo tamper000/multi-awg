@@ -16,8 +16,8 @@ proxies:
   - name: "nameConfig"
     type: wireguard
     private-key: private_key
-    server: server_ip
-    port: server_port
+    server: 1.1.1.1
+    port: 1234
     ip: client_ip
     public-key: public_key
     allowed-ips: ["0.0.0.0/0"]
@@ -50,5 +50,5 @@ proxy-groups:
 # --- Rules ---
 rules:
     - GEOIP,RU,DIRECT
-    
+
     - MATCH,🌐 Обход РФ
