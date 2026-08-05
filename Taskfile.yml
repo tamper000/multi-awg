@@ -9,6 +9,8 @@ vars:
 
 tasks:
   run:
+    aliases:
+      - up
     cmds:
       - "{{.COMPOSE_CMD}} up"
 
@@ -17,6 +19,9 @@ tasks:
       - "{{.COMPOSE_CMD}} up --build"
 
   stop:
+    aliases:
+      - kill
+      - down
     cmds:
       - "{{.COMPOSE_CMD}} down"
 
