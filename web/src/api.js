@@ -30,7 +30,9 @@ export async function api(path, options = {}) {
   try {
     response = await fetch(path, { ...options, headers })
   } catch {
-    throw new Error('Сервер недоступен. Попробуйте ещё раз.')
+    const error = 'Сервер недоступен. Попробуйте ещё раз.'
+    window.dispatchEvent(new CustomEvent('app-error', { detail: error }))
+    throw new Error(error)
   }
 
   const type = response.headers.get('content-type') || ''
@@ -39,7 +41,18 @@ export async function api(path, options = {}) {
     session.clear()
     window.dispatchEvent(new Event('session-expired'))
   }
-  if (!response.ok) throw new Error(body?.error || `Ошибка ${response.status}`)
+  if (!response.ok) {
+    const message = body?.error || `Ошибка ${response.status}`
+    const labels = {
+      'peer name already exists': 'Конфиг с таким именем уже существует',
+      'username already exists': 'Пользователь с таким логином уже существует',
+      'config limit reached': 'Достигнут лимит конфигов',
+      'invalid credentials': 'Неверный логин или пароль',
+    }
+    const error = labels[message] || message
+    window.dispatchEvent(new CustomEvent('app-error', { detail: error }))
+    throw new Error(error)
+  }
   return body
 }
 

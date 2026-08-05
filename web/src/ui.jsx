@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'preact/hooks'
+
 export function Icon({ name, size = 20 }) {
   const paths = {
     bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />,
@@ -29,6 +31,21 @@ export function Loader() {
 
 export function Notice({ children, kind = 'error' }) {
   return children ? <div class={`notice notice-${kind}`} role="alert">{children}</div> : null
+}
+
+export function Toast() {
+  const [message, setMessage] = useState('')
+  useEffect(() => {
+    let timer
+    const show = (event) => {
+      setMessage(event.detail)
+      clearTimeout(timer)
+      timer = setTimeout(() => setMessage(''), 3500)
+    }
+    addEventListener('app-error', show)
+    return () => { removeEventListener('app-error', show); clearTimeout(timer) }
+  }, [])
+  return message ? <div class="toast"><Notice>{message}</Notice></div> : null
 }
 
 export function Modal({ title, children, onClose }) {

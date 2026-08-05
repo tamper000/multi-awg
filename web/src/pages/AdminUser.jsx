@@ -16,11 +16,11 @@ export default function AdminUser({ username, user }) {
   async function extend(event) {
     event.preventDefault()
     const days = Number(new FormData(event.currentTarget).get('days'))
-    try { await api(`/api/admin/users/${encodeURIComponent(username)}`, { method: 'PATCH', body: jsonBody({ days }) }); setExtendOpen(false); load() } catch (err) { setError(err.message) }
+    try { await api(`/api/admin/users/${encodeURIComponent(username)}`, { method: 'PATCH', body: jsonBody({ days }) }); setExtendOpen(false); load() } catch {}
   }
   async function remove() {
     if (!confirm(`Удалить пользователя «${username}» и все его конфиги? Это действие нельзя отменить.`)) return
-    try { await api(`/api/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' }); navigate('/admin') } catch (err) { setError(err.message) }
+    try { await api(`/api/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' }); navigate('/admin') } catch {}
   }
   const active = !data?.expires_at || new Date(data.expires_at) > new Date()
   return <Layout user={user} title={username} subtitle="Профиль пользователя и статистика подключений" action={<button class="button button-ghost" onClick={() => navigate('/admin')}><Icon name="back" /> К списку</button>}>

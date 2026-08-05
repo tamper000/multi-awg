@@ -86,6 +86,9 @@ input::placeholder { color: #5f5f5c; }
 .notice-warning { color: #e9d698; background: #342e1c; border-color: #59502d; }
 .notice-success { color: var(--lime); background: #28321d; border-color: #4a5f28; }
 .sync-notice { position: fixed; z-index: 10; top: 94px; right: 24px; width: min(360px, calc(100% - 48px)); }
+
+.toast { position: fixed; z-index: 30; top: 24px; right: 24px; width: min(380px, calc(100% - 48px)); }
+.toast .notice { margin: 0; box-shadow: 0 14px 40px #0008; }
 .sync-notice .notice { margin: 0; box-shadow: 0 14px 40px #0008; }
 .loader-wrap { min-height: 260px; display: grid; place-content: center; justify-items: center; gap: 14px; color: var(--muted); }
 .loader { width: 34px; height: 34px; border: 3px solid #333; border-top-color: var(--lime); border-radius: 50%; animation: spin .7s linear infinite; }
