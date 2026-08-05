@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -27,8 +28,10 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	user, err := h.verifyUser(r, req.Username, req.Password)
 	if err != nil {
 		if errors.Is(err, errInvalidCredentials) {
+			slog.Debug("invalid credentials", "username", req.Username)
 			writeJSON(w, 401, map[string]string{"error": "invalid credentials"})
 		} else {
+			slog.Error("verify user", "username", req.Username, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -36,17 +39,20 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 
 	jti, err := auth.NewJTI()
 	if err != nil {
+		slog.Error("generate jti", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	expiresAt := time.Now().Add(h.config.TokenTTL)
 	if err := h.sessions.CreateSession(r.Context(), user.ID, jti, expiresAt); err != nil {
+		slog.Error("create session", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 
 	token, _, err := h.tokens.Generate(user.ID, user.Username, user.Role, jti)
 	if err != nil {
+		slog.Error("generate token", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -62,7 +68,9 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	header := r.Header.Get("Authorization")
 	if strings.HasPrefix(header, "Bearer ") {
 		if claims, err := h.tokens.Parse(strings.TrimPrefix(header, "Bearer ")); err == nil {
-			_ = h.sessions.DeleteSession(r.Context(), claims.JTI)
+			if err := h.sessions.DeleteSession(r.Context(), claims.JTI); err != nil {
+				slog.Error("delete session", "jti", claims.JTI, "err", err)
+			}
 		}
 	}
 	writeJSON(w, 200, map[string]string{"status": "logged out"})

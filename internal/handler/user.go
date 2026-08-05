@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"math"
 	"net/http"
 	"time"
@@ -16,27 +17,32 @@ import (
 func (h *Handler) listConfigs(w http.ResponseWriter, r *http.Request) {
 	claims, ok := ClaimsFromContext(r.Context())
 	if !ok {
+		slog.Error("claims missing from context")
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	userID, err := claims.UserID()
 	if err != nil {
+		slog.Error("extract user id", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 
 	peers, err := h.peers.ListByUser(r.Context(), userID)
 	if err != nil {
+		slog.Error("list peers", "userID", userID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 
 	statsByName := map[string]worker.Stats{}
-	if status, body, err := h.worker.GetStats(r.Context()); err == nil && status < 400 {
-		if stats, ok := body.([]worker.Stats); ok {
-			for _, s := range stats {
-				statsByName[s.Name] = s
-			}
+	if status, body, err := h.worker.GetStats(r.Context()); err != nil {
+		slog.Error("get stats from worker", "err", err)
+	} else if status >= 400 {
+		slog.Error("get stats from worker", "status", status, "body", body)
+	} else if stats, ok := body.([]worker.Stats); ok {
+		for _, s := range stats {
+			statsByName[s.Name] = s
 		}
 	}
 
@@ -55,6 +61,7 @@ func (h *Handler) listConfigs(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 	claims, ok := ClaimsFromContext(r.Context())
 	if !ok {
+		slog.Error("claims missing from context")
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -64,6 +71,7 @@ func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
+			slog.Error("get user by username", "username", claims.Username, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -94,11 +102,13 @@ func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 
 	claims, ok := ClaimsFromContext(r.Context())
 	if !ok {
+		slog.Error("claims missing from context")
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	userID, err := claims.UserID()
 	if err != nil {
+		slog.Error("extract user id", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -108,6 +118,7 @@ func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "config not found"})
 		} else {
+			slog.Error("get peer", "userID", userID, "name", name, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -115,10 +126,12 @@ func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 
 	status, body, err := h.worker.GetPeerConfig(r.Context(), peer.PeerName)
 	if err != nil {
+		slog.Error("get peer config from worker", "peer", peer.PeerName, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status >= 400 {
+		slog.Error("get peer config from worker", "peer", peer.PeerName, "status", status, "body", body)
 		writeJSON(w, status, body)
 		return
 	}
@@ -127,7 +140,9 @@ func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 	if cfg, ok := body.(worker.PeerConfig); ok {
 		resp["config"] = cfg.Config
 	}
-	if status, body, err := h.worker.GetPeerStats(r.Context(), peer.PeerName); err == nil && status < 400 {
+	if status, body, err := h.worker.GetPeerStats(r.Context(), peer.PeerName); err != nil {
+		slog.Error("get peer stats from worker", "peer", peer.PeerName, "err", err)
+	} else if status < 400 {
 		if st, ok := body.(worker.Stats); ok {
 			resp["received"] = st.Received
 			resp["sent"] = st.Sent
@@ -155,11 +170,13 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 
 	claims, ok := ClaimsFromContext(r.Context())
 	if !ok {
+		slog.Error("claims missing from context")
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	userID, err := claims.UserID()
 	if err != nil {
+		slog.Error("extract user id", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -169,6 +186,7 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
+			slog.Error("get user by username", "username", claims.Username, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -180,6 +198,7 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 
 	names, err := h.peers.ListNamesByUser(r.Context(), userID)
 	if err != nil {
+		slog.Error("list peer names", "userID", userID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -191,17 +210,22 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 	peerName := claims.Username + "." + req.Name
 	status, body, err := h.worker.CreatePeer(r.Context(), peerName)
 	if err != nil {
+		slog.Error("create peer on worker", "peer", peerName, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status != 201 {
+		slog.Error("create peer on worker", "peer", peerName, "status", status, "body", body)
 		writeJSON(w, status, body)
 		return
 	}
 
 	subToken, err := h.peers.CreatePeer(r.Context(), userID, req.Name, peerName)
 	if err != nil {
-		_, _, _ = h.worker.DeletePeer(r.Context(), peerName)
+		slog.Error("create peer in db", "userID", userID, "peer", peerName, "err", err)
+		if _, _, delErr := h.worker.DeletePeer(r.Context(), peerName); delErr != nil {
+			slog.Error("rollback delete peer on worker", "peer", peerName, "err", delErr)
+		}
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -217,6 +241,7 @@ func (h *Handler) deleteConfig(w http.ResponseWriter, r *http.Request) {
 
 	claims, ok := ClaimsFromContext(r.Context())
 	if !ok {
+		slog.Error("claims missing from context")
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -224,20 +249,24 @@ func (h *Handler) deleteConfig(w http.ResponseWriter, r *http.Request) {
 	peerName := claims.Username + "." + name
 	status, body, err := h.worker.DeletePeer(r.Context(), peerName)
 	if err != nil {
+		slog.Error("delete peer on worker", "peer", peerName, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status >= 400 {
+		slog.Error("delete peer on worker", "peer", peerName, "status", status, "body", body)
 		writeJSON(w, status, body)
 		return
 	}
 
 	userID, err := claims.UserID()
 	if err != nil {
+		slog.Error("extract user id", "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if err := h.peers.DeleteByName(r.Context(), userID, name); err != nil && !errors.Is(err, repo.ErrNotFound) {
+		slog.Error("delete peer in db", "userID", userID, "name", name, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -260,6 +289,7 @@ func (h *Handler) password(w http.ResponseWriter, r *http.Request) {
 
 	claims, ok := ClaimsFromContext(r.Context())
 	if !ok {
+		slog.Error("claims missing from context")
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
@@ -267,14 +297,17 @@ func (h *Handler) password(w http.ResponseWriter, r *http.Request) {
 	user, err := h.verifyUser(r, claims.Username, req.OldPassword)
 	if err != nil {
 		if errors.Is(err, errInvalidCredentials) {
+			slog.Debug("invalid credentials", "username", claims.Username)
 			writeJSON(w, 401, map[string]string{"error": "invalid credentials"})
 		} else {
+			slog.Error("verify user", "username", claims.Username, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
 	}
 
 	if err := h.repo.UpdatePassword(r.Context(), user.ID, req.NewPassword); err != nil {
+		slog.Error("update password", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}

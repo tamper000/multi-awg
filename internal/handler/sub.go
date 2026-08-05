@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -17,6 +18,7 @@ func (h *Handler) loadSub(w http.ResponseWriter, r *http.Request) (*models.Peer,
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "subscription not found"})
 		} else {
+			slog.Error("get peer by sub token", "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return nil, worker.Sub{}, false
@@ -24,15 +26,18 @@ func (h *Handler) loadSub(w http.ResponseWriter, r *http.Request) (*models.Peer,
 
 	status, body, err := h.worker.GetPeerSub(r.Context(), peer.PeerName)
 	if err != nil {
+		slog.Error("get peer sub from worker", "peer", peer.PeerName, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return nil, worker.Sub{}, false
 	}
 	if status >= 400 {
+		slog.Error("get peer sub from worker", "peer", peer.PeerName, "status", status, "body", body)
 		writeJSON(w, status, body)
 		return nil, worker.Sub{}, false
 	}
 	sub, ok := body.(worker.Sub)
 	if !ok {
+		slog.Error("unexpected peer sub response", "peer", peer.PeerName, "body", body)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return nil, worker.Sub{}, false
 	}
