@@ -36,8 +36,8 @@ export default function App() {
   if (!user || !session.token()) return <><Login onLogin={(nextUser) => setUser(nextUser)} /><Toast /></>
 
   if (user.role === 'admin') {
-    const username = path.match(/^\/admin\/users\/([^/]+)$/)?.[1]
-    if (username) return <><AdminUser username={decodeURIComponent(username)} user={user} /><Toast /></>
+    const userID = path.match(/^\/admin\/users\/(\d+)$/)?.[1]
+    if (userID) return <><AdminUser userID={userID} user={user} /><Toast /></>
     return <><AdminDashboard user={user} onLogout={() => setUser(null)} /><Toast /></>
   }
   return <><UserPanel user={user} onLogout={() => setUser(null)} /><Toast /></>

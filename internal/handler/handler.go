@@ -30,10 +30,11 @@ type Handler struct {
 
 type UserRepo interface {
 	CreateUser(ctx context.Context, username string, plainPassword string, role string, expiresAt *time.Time) error
-	DeleteUser(ctx context.Context, username string) error
+	DeleteUser(ctx context.Context, id int64) error
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
+	GetByID(ctx context.Context, id int64) (*models.User, error)
 	ListUsers(ctx context.Context) ([]models.User, error)
-	UpdateExpiry(ctx context.Context, username string, expiresAt *time.Time) error
+	UpdateExpiry(ctx context.Context, id int64, expiresAt *time.Time) error
 	UpdatePassword(ctx context.Context, id int64, plainPassword string) error
 	SetFrozen(ctx context.Context, id int64, frozen bool) error
 }
@@ -100,9 +101,9 @@ func (h *Handler) Routes() http.Handler {
 		r.Use(h.adminMiddleware)
 		r.Get("/users", h.listUsers)
 		r.Post("/users", h.createUser)
-		r.Get("/users/{username}", h.getUser)
-		r.Delete("/users/{username}", h.deleteUser)
-		r.Patch("/users/{username}", h.patchUser)
+		r.Get("/users/{id}", h.getUser)
+		r.Delete("/users/{id}", h.deleteUser)
+		r.Patch("/users/{id}", h.patchUser)
 		r.Post("/sync", h.syncWorker)
 	})
 

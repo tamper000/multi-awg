@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -72,13 +73,17 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
-	user, err := h.repo.GetByUsername(r.Context(), username)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, 400, map[string]string{"error": "invalid user id"})
+		return
+	}
+	user, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
-			slog.Error("get user by username", "username", username, "err", err)
+			slog.Error("get user by id", "userID", id, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -132,14 +137,18 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, 400, map[string]string{"error": "invalid user id"})
+		return
+	}
 
-	user, err := h.repo.GetByUsername(r.Context(), username)
+	user, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
-			slog.Error("get user by username", "username", username, "err", err)
+			slog.Error("get user by id", "userID", id, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -165,11 +174,11 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.repo.DeleteUser(r.Context(), username); err != nil {
+	if err := h.repo.DeleteUser(r.Context(), user.ID); err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
-			slog.Error("delete user", "username", username, "err", err)
+			slog.Error("delete user", "userID", user.ID, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -178,7 +187,11 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, 400, map[string]string{"error": "invalid user id"})
+		return
+	}
 
 	var req struct {
 		Days int `json:"days"`
@@ -192,21 +205,25 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresAt := time.Now().Add(time.Duration(req.Days) * 24 * time.Hour)
-	if err := h.repo.UpdateExpiry(r.Context(), username, &expiresAt); err != nil {
+	user, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
-			slog.Error("update expiry", "username", username, "err", err)
+			slog.Error("get user by id", "userID", id, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
 	}
 
-	user, err := h.repo.GetByUsername(r.Context(), username)
-	if err != nil {
-		slog.Error("get user by username", "username", username, "err", err)
-		writeJSON(w, 500, map[string]string{"error": "internal error"})
+	expiresAt := time.Now().Add(time.Duration(req.Days) * 24 * time.Hour)
+	if err := h.repo.UpdateExpiry(r.Context(), id, &expiresAt); err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			writeJSON(w, 404, map[string]string{"error": "user not found"})
+		} else {
+			slog.Error("update expiry", "userID", id, "err", err)
+			writeJSON(w, 500, map[string]string{"error": "internal error"})
+		}
 		return
 	}
 
@@ -226,7 +243,7 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, 200, map[string]interface{}{
-		"username":   username,
+		"username":   user.Username,
 		"expires_at": expiresAt,
 	})
 }

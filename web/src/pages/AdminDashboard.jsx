@@ -61,7 +61,7 @@ export default function AdminDashboard({ user, onLogout }) {
       <section class="section-block"><div class="section-title"><div><h2>Список пользователей</h2><p>Откройте профиль для статистики и управления</p></div><button class="button button-ghost" onClick={() => setPwOpen(true)}><Icon name="key" /> Сменить пароль</button></div>
         {!clients.length ? <Empty title="Пользователей пока нет" text="Добавьте первого пользователя и передайте ему созданный пароль." /> : <div class="user-table"><div class="table-row table-head"><span>Пользователь</span><span>Статус</span><span>Подписка до</span><span>Создан</span><span /></div>{clients.map((item) => {
           const isActive = !item.expires_at || new Date(item.expires_at) > new Date()
-          return <button class="table-row" onClick={() => navigate(`/admin/users/${encodeURIComponent(item.username)}`)} key={item.id}><span class="user-cell"><b>{item.username[0].toUpperCase()}</b><strong>{item.username}</strong></span><span><i class={`status ${isActive ? 'active' : 'expired'}`}>{isActive ? 'Активна' : 'Истекла'}</i></span><span>{formatDate(item.expires_at)}</span><span>{formatDate(item.created_at)}</span><span class="row-arrow"><Icon name="arrow" /></span></button>
+          return <button class="table-row" onClick={() => navigate(`/admin/users/${item.id}`)} key={item.id}><span class="user-cell"><b>{item.username[0].toUpperCase()}</b><strong>{item.username}</strong></span><span><i class={`status ${isActive ? 'active' : 'expired'}`}>{isActive ? 'Активна' : 'Истекла'}</i></span><span>{formatDate(item.expires_at)}</span><span>{formatDate(item.created_at)}</span><span class="row-arrow"><Icon name="arrow" /></span></button>
         })}</div>}
       </section>
     </>}
