@@ -64,6 +64,8 @@ func (s *Server) Handler() http.Handler {
 		r.Post("/api/peers", s.createPeer)
 		r.Get("/api/peers", s.listPeers)
 		r.Delete("/api/peers", s.deletePeers)
+		r.Post("/api/peers/freeze", s.freezePeers)
+		r.Post("/api/peers/unfreeze", s.unfreezePeers)
 		r.Get("/api/peers/{name}/config", s.getPeerConfig)
 		r.Get("/api/peers/{name}/stats", s.getPeerStats)
 		r.Get("/api/peers/{name}/sub", s.getPeerSub)
@@ -464,6 +466,52 @@ func (s *Server) removePeers(w http.ResponseWriter, r *http.Request, names []str
 	}
 
 	writeJSON(w, 200, map[string]string{"status": "deleted"})
+}
+
+func (s *Server) freezePeers(w http.ResponseWriter, r *http.Request) {
+	s.freezePeersAction(w, r, true)
+}
+
+func (s *Server) unfreezePeers(w http.ResponseWriter, r *http.Request) {
+	s.freezePeersAction(w, r, false)
+}
+
+func (s *Server) freezePeersAction(w http.ResponseWriter, r *http.Request, frozen bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var req struct {
+		Names []string `json:"names"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, 400, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if len(req.Names) == 0 {
+		writeJSON(w, 400, map[string]string{"error": "names required"})
+		return
+	}
+
+	matched, err := setPeersFrozen(s.confPath(), s.confDir, req.Names, frozen)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	if matched == 0 {
+		writeJSON(w, 404, map[string]string{"error": "peer not found"})
+		return
+	}
+
+	if err := s.syncAWG(); err != nil {
+		writeJSON(w, 500, map[string]string{"error": fmt.Sprintf("sync awg: %v", err)})
+		return
+	}
+
+	status := "frozen"
+	if !frozen {
+		status = "unfrozen"
+	}
+	writeJSON(w, 200, map[string]string{"status": status, "count": fmt.Sprintf("%d", matched)})
 }
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
