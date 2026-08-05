@@ -75,9 +75,10 @@ func generateMihomoConfig(config *MihomoConfig, peer *Peer, serverPubKey, endpoi
 
 func isNotEmpty(strs ...string) bool {
 	for _, s := range strs {
-		if s == "" {
-			return false
+		if s != "" {
+			return true
 		}
 	}
-	return true
+
+	return false
 }
