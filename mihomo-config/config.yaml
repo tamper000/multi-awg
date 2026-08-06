@@ -39,7 +39,6 @@ rules:
 
 dns:
   enable: true
-  enhanced-mode: fake-ip
   respect-rules: true
   nameserver:
     - 94.140.14.14
