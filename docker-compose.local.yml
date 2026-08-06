@@ -14,7 +14,7 @@ services:
     volumes:
       - ./mihomo-config:/root/.config/mihomo
     ports:
-      - "5060:51821/udp"
+      - "5060:51820/udp" # expose awg port to host
     networks:
       - vpn
     healthcheck:
@@ -45,25 +45,25 @@ services:
       retries: 3
       start_period: "5s"
 
-  awg-proxy:
-    build:
-      context: ./awg-proxy
-      dockerfile: Dockerfile
-    container_name: awg-proxy
-    volumes:
-      - ./awg-proxy/proxy.toml:/workdir/proxy.toml:ro
-      - ./amnezia-config/awg0.conf:/workdir/awg0.conf:ro
-    command: ["/workdir/proxy.toml"]
-    network_mode: service:mihomo
-    depends_on:
-      - amneziawg
-      - mihomo
-    healthcheck:
-      test: "pidof proxy"
-      interval: "10s"
-      timeout: "2s"
-      retries: 3
-      start_period: "5s"
+  # awg-proxy:
+  #   build:
+  #     context: ./awg-proxy
+  #     dockerfile: Dockerfile
+  #   container_name: awg-proxy
+  #   volumes:
+  #     - ./awg-proxy/proxy.toml:/workdir/proxy.toml:ro
+  #     - ./amnezia-config/awg0.conf:/workdir/awg0.conf:ro
+  #   command: ["/workdir/proxy.toml"]
+  #   network_mode: service:mihomo
+  #   depends_on:
+  #     - amneziawg
+  #     - mihomo
+  #   healthcheck:
+  #     test: "pidof proxy"
+  #     interval: "10s"
+  #     timeout: "2s"
+  #     retries: 3
+  #     start_period: "5s"
 
   worker:
     build:
@@ -79,7 +79,7 @@ services:
     depends_on:
       - mihomo
       - amneziawg
-      - awg-proxy
+      # - awg-proxy
 
   server:
     build:

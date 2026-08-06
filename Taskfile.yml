@@ -11,6 +11,7 @@ tasks:
   run:
     aliases:
       - up
+      - start
     cmds:
       - "{{.COMPOSE_CMD}} up"
 
