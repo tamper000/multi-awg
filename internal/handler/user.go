@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math"
 	"net/http"
 	"time"
 
@@ -83,13 +84,11 @@ func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 
 	daysLeft := -1
 	if user.ExpiresAt != nil {
-		until := time.Until(*user.ExpiresAt)
-		if until.Seconds() < 1 {
+		until := time.Until(*user.ExpiresAt).Minutes()
+		if until < 1 {
 			daysLeft = 0
-		} else if until.Hours() <= 24 {
-			daysLeft = 1
 		} else {
-			daysLeft = int(until.Hours() / 24)
+			daysLeft = int(math.Ceil(until / (60 * 24)))
 		}
 	}
 
