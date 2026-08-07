@@ -154,11 +154,15 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	names, err := h.peers.ListNamesByUser(r.Context(), user.ID)
+	peers, err := h.peers.ListByUser(r.Context(), user.ID)
 	if err != nil {
 		slog.Error("list peer names", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
+	}
+	names := make([]string, 0, len(peers))
+	for _, peer := range peers {
+		names = append(names, peer.PeerName)
 	}
 	if len(names) > 0 {
 		status, body, err := h.worker.DeletePeers(r.Context(), names)
@@ -227,13 +231,17 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	names, err := h.peers.ListNamesByUser(r.Context(), user.ID)
+	peers, err := h.peers.ListByUser(r.Context(), user.ID)
 	if err != nil {
 		slog.Error("list peer names", "userID", user.ID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 
+	names := make([]string, 0, len(peers))
+	for _, peer := range peers {
+		names = append(names, peer.PeerName)
+	}
 	status, _, err := h.worker.UnfreezePeers(r.Context(), names)
 	if err != nil {
 		slog.Error("unfreeze peers", "names", names, "err", err)

@@ -46,12 +46,11 @@ type SessionRepo interface {
 }
 
 type PeerRepo interface {
-	CreatePeer(ctx context.Context, userID int64, name string, peerName string) (string, error)
-	DeleteByName(ctx context.Context, userID int64, name string) error
+	CreatePeer(ctx context.Context, userID int64, name string) (*models.Peer, error)
+	DeleteByID(ctx context.Context, id int64) error
 	GetBySubToken(ctx context.Context, token string) (*models.Peer, error)
 	GetByUserAndName(ctx context.Context, userID int64, name string) (*models.Peer, error)
 	ListByUser(ctx context.Context, userID int64) ([]models.Peer, error)
-	ListNamesByUser(ctx context.Context, userID int64) ([]string, error)
 }
 
 type WorkerClient interface {

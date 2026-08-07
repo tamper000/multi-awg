@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
-	"math"
 	"net/http"
 	"time"
 
@@ -66,12 +65,17 @@ func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.repo.GetByUsername(r.Context(), claims.Username)
+	userID, err := claims.UserID()
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+	user, err := h.repo.GetByID(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
-			slog.Error("get user by username", "username", claims.Username, "err", err)
+			slog.Error("get user by id", "userID", userID, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -79,9 +83,13 @@ func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 
 	daysLeft := -1
 	if user.ExpiresAt != nil {
-		daysLeft = int(math.Ceil(time.Until(*user.ExpiresAt).Hours() / 24))
-		if daysLeft < 0 {
+		until := time.Until(*user.ExpiresAt)
+		if until.Seconds() < 1 {
 			daysLeft = 0
+		} else if until.Hours() <= 24 {
+			daysLeft = 1
+		} else {
+			daysLeft = int(until.Hours() / 24)
 		}
 	}
 
@@ -181,12 +189,12 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.repo.GetByUsername(r.Context(), claims.Username)
+	user, err := h.repo.GetByID(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			writeJSON(w, 404, map[string]string{"error": "user not found"})
 		} else {
-			slog.Error("get user by username", "username", claims.Username, "err", err)
+			slog.Error("get user by id", "userID", userID, "err", err)
 			writeJSON(w, 500, map[string]string{"error": "internal error"})
 		}
 		return
@@ -196,40 +204,38 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	names, err := h.peers.ListNamesByUser(r.Context(), userID)
+	peers, err := h.peers.ListByUser(r.Context(), userID)
 	if err != nil {
 		slog.Error("list peer names", "userID", userID, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
-	if len(names) >= h.config.MaxConfigs {
+	if len(peers) >= h.config.MaxConfigs {
 		writeJSON(w, 400, map[string]string{"error": "config limit reached"})
 		return
 	}
 
-	peerName := claims.Username + "." + req.Name
-	status, body, err := h.worker.CreatePeer(r.Context(), peerName)
+	peer, err := h.peers.CreatePeer(r.Context(), userID, req.Name)
 	if err != nil {
-		slog.Error("create peer on worker", "peer", peerName, "err", err)
+		slog.Error("create peer in db", "userID", userID, "name", req.Name, "err", err)
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+	status, body, err := h.worker.CreatePeer(r.Context(), peer.PeerName)
+	if err != nil {
+		slog.Error("create peer on worker", "peer", peer.PeerName, "err", err)
+		_ = h.peers.DeleteByID(r.Context(), peer.ID)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status != 201 {
-		slog.Error("create peer on worker", "peer", peerName, "status", status, "body", body)
+		slog.Error("create peer on worker", "peer", peer.PeerName, "status", status, "body", body)
+		_ = h.peers.DeleteByID(r.Context(), peer.ID)
 		writeJSON(w, status, body)
 		return
 	}
 
-	subToken, err := h.peers.CreatePeer(r.Context(), userID, req.Name, peerName)
-	if err != nil {
-		slog.Error("create peer in db", "userID", userID, "peer", peerName, "err", err)
-		if _, _, delErr := h.worker.DeletePeer(r.Context(), peerName); delErr != nil {
-			slog.Error("rollback delete peer on worker", "peer", peerName, "err", delErr)
-		}
-		writeJSON(w, 500, map[string]string{"error": "internal error"})
-		return
-	}
-	writeJSON(w, status, map[string]interface{}{"name": req.Name, "sub_token": subToken})
+	writeJSON(w, status, map[string]interface{}{"name": req.Name, "sub_token": peer.SubToken})
 }
 
 func (h *Handler) deleteConfig(w http.ResponseWriter, r *http.Request) {
@@ -246,26 +252,29 @@ func (h *Handler) deleteConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	peerName := claims.Username + "." + name
-	status, body, err := h.worker.DeletePeer(r.Context(), peerName)
+	userID, err := claims.UserID()
 	if err != nil {
-		slog.Error("delete peer on worker", "peer", peerName, "err", err)
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+	peer, err := h.peers.GetByUserAndName(r.Context(), userID, name)
+	if err != nil {
+		writeJSON(w, 404, map[string]string{"error": "config not found"})
+		return
+	}
+	status, body, err := h.worker.DeletePeer(r.Context(), peer.PeerName)
+	if err != nil {
+		slog.Error("delete peer on worker", "peer", peer.PeerName, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
 	}
 	if status >= 400 {
-		slog.Error("delete peer on worker", "peer", peerName, "status", status, "body", body)
+		slog.Error("delete peer on worker", "peer", peer.PeerName, "status", status, "body", body)
 		writeJSON(w, status, body)
 		return
 	}
 
-	userID, err := claims.UserID()
-	if err != nil {
-		slog.Error("extract user id", "err", err)
-		writeJSON(w, 500, map[string]string{"error": "internal error"})
-		return
-	}
-	if err := h.peers.DeleteByName(r.Context(), userID, name); err != nil && !errors.Is(err, repo.ErrNotFound) {
+	if err := h.peers.DeleteByID(r.Context(), peer.ID); err != nil && !errors.Is(err, repo.ErrNotFound) {
 		slog.Error("delete peer in db", "userID", userID, "name", name, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
