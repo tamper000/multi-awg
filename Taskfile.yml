@@ -8,9 +8,9 @@ vars:
   COMPOSE_CMD: docker compose -f {{.COMPOSE_FILE}}
 
 tasks:
-  run:
+  up:
     aliases:
-      - up
+      - run
       - start
     cmds:
       - "{{.COMPOSE_CMD}} up"
@@ -19,10 +19,10 @@ tasks:
     cmds:
       - "{{.COMPOSE_CMD}} up --build"
 
-  stop:
+  down:
     aliases:
       - kill
-      - down
+      - stop
     cmds:
       - "{{.COMPOSE_CMD}} down"
 

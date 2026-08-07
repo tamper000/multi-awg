@@ -31,23 +31,51 @@ func generateSubToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (r *PeerRepo) CreatePeer(ctx context.Context, userID int64, name, peerName string) (string, error) {
+func (r *PeerRepo) CreatePeer(ctx context.Context, userID int64, name string) (*models.Peer, error) {
 	subToken, err := generateSubToken()
 	if err != nil {
-		return "", fmt.Errorf("generate sub token: %w", err)
+		return nil, fmt.Errorf("generate sub token: %w", err)
 	}
-	_, err = r.db.Insert(db.PeersTable).Rows(
-		goqu.Record{
-			"user_id":   userID,
-			"name":      name,
-			"peer_name": peerName,
-			"sub_token": subToken,
-		},
-	).Executor().ExecContext(ctx)
+
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", fmt.Errorf("create peer: %w", err)
+		return nil, fmt.Errorf("begin peer transaction: %w", err)
 	}
-	return subToken, nil
+
+	peer := models.Peer{
+		UserID:   userID,
+		Name:     name,
+		PeerName: "",
+		SubToken: subToken,
+	}
+
+	err = tx.Wrap(func() error {
+		result, err := tx.Insert(db.PeersTable).Rows(
+			peer,
+		).Executor().ExecContext(ctx)
+		if err != nil {
+			return fmt.Errorf("create peer: %w", err)
+		}
+
+		id, err := result.LastInsertId()
+		if err != nil {
+			return fmt.Errorf("get peer id: %w", err)
+		}
+
+		peerName := fmt.Sprintf("%d.%d", userID, id)
+		_, err = tx.Update(db.PeersTable).Set(
+			goqu.Record{"peer_name": peerName},
+		).Where(goqu.C("id").Eq(id)).Executor().ExecContext(ctx)
+		if err != nil {
+			return fmt.Errorf("set peer name: %w", err)
+		}
+
+		peer.ID = id
+		peer.PeerName = peerName
+		return nil
+	})
+
+	return &peer, err
 }
 
 func (r *PeerRepo) GetBySubToken(ctx context.Context, token string) (*models.Peer, error) {
@@ -75,18 +103,6 @@ func (r *PeerRepo) ListByUser(ctx context.Context, userID int64) ([]models.Peer,
 	return peers, nil
 }
 
-func (r *PeerRepo) ListNamesByUser(ctx context.Context, userID int64) ([]string, error) {
-	peers, err := r.ListByUser(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	names := make([]string, 0, len(peers))
-	for _, p := range peers {
-		names = append(names, p.PeerName)
-	}
-	return names, nil
-}
-
 func (r *PeerRepo) GetByUserAndName(ctx context.Context, userID int64, name string) (*models.Peer, error) {
 	var p models.Peer
 	found, err := r.db.From(db.PeersTable).
@@ -101,9 +117,9 @@ func (r *PeerRepo) GetByUserAndName(ctx context.Context, userID int64, name stri
 	return &p, nil
 }
 
-func (r *PeerRepo) DeleteByName(ctx context.Context, userID int64, name string) error {
+func (r *PeerRepo) DeleteByID(ctx context.Context, id int64) error {
 	res, err := r.db.Delete(db.PeersTable).
-		Where(goqu.C("user_id").Eq(userID), goqu.C("name").Eq(name)).
+		Where(goqu.C("id").Eq(id)).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return fmt.Errorf("delete peer: %w", err)

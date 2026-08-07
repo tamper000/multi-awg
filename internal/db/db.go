@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -28,13 +27,6 @@ func Open(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
-	// ALTER нужен для существующих БД (SQLite не умеет ADD COLUMN IF NOT EXISTS);
-	// на свежей БД колонка уже есть в schema, поэтому дубль игнорируем.
-	if _, err := d.Exec(`ALTER TABLE users ADD COLUMN frozen INTEGER NOT NULL DEFAULT 0`); err != nil &&
-		!strings.Contains(err.Error(), "duplicate column name") {
-
-		return nil, fmt.Errorf("migrate frozen: %w", err)
-	}
 	return d, nil
 }
 

@@ -46,11 +46,12 @@ func (r *UserRepo) CreateUser(ctx context.Context,
 	}
 
 	_, err = r.db.Insert(db.UsersTable).Rows(
-		goqu.Record{
-			"username":      username,
-			"password_hash": hash,
-			"role":          role,
-			"expires_at":    expiresAt,
+		models.User{
+			Username:     username,
+			Role:         role,
+			PasswordHash: hash,
+			ExpiresAt:    expiresAt,
+			Frozen:       false,
 		},
 	).Executor().ExecContext(ctx)
 	if err != nil {

@@ -15,7 +15,7 @@ type UserRepo interface {
 }
 
 type PeerRepo interface {
-	ListNamesByUser(ctx context.Context, userID int64) ([]string, error)
+	ListByUser(ctx context.Context, userID int64) ([]models.Peer, error)
 }
 
 type WorkerClient interface {
@@ -70,12 +70,16 @@ func (s *Service) cleanup(ctx context.Context) {
 				continue
 			}
 
-			names, err := s.peerRepo.ListNamesByUser(ctx, user.ID)
+			peers, err := s.peerRepo.ListByUser(ctx, user.ID)
 			if err != nil {
 				slog.Error("get peers name", "userID", user.ID, "err", err)
 				continue
 			}
 
+			names := make([]string, 0, len(peers))
+			for _, peer := range peers {
+				names = append(names, peer.PeerName)
+			}
 			if len(names) > 0 {
 				_, _, err = s.worker.FreezePeers(ctx, names)
 				if err != nil {
