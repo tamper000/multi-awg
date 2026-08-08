@@ -36,6 +36,10 @@ fi
 ip -4 address add "$AWG_ADDR" dev "$AWG_IF"
 ip link set mtu "$AWG_MTU" up dev "$AWG_IF"
 ip link set dev "$AWG_IF" up
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+# Disable routing
+exit 0
 
 echo "[*] Initializing routing: $AWG_IF -> $MIHOMO_IF via fwmark"
 
@@ -58,7 +62,6 @@ fi
 echo "[+] Detected client subnet: $CLIENT_SUBNET"
 
 iptables -A FORWARD -i $AWG_IF -j ACCEPT
-iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 iptables -t nat -A POSTROUTING -o $MIHOMO_IF -j MASQUERADE
 
 
