@@ -56,6 +56,7 @@ export default function UserPanel({ user, onLogout }) {
       </section>
       <section class="section-block">
         <div class="section-title"><div><h2>Мои устройства</h2><p>Нажмите на конфиг, чтобы открыть способы подключения</p></div><button class="button button-ghost" onClick={() => setModal('password')}><Icon name="key" /> Сменить пароль</button></div>
+        <div class="device-rule"><Icon name="bolt" /><strong>1 конфиг = 1 устройство</strong><span>Для другого устройства создайте отдельный конфиг</span></div>
         {!configs.length ? <Empty title="Устройств пока нет" text="Создайте первый конфиг и подключитесь за пару минут." /> : <div class="config-grid">{configs.map((config) => <article class="config-card" key={config.name}>
           <button class="config-main" onClick={() => navigate(`/subscription/${config.sub_token}`)}><span class="device-icon"><Icon name="bolt" /></span><span><strong>{config.name}</strong><small>Получено {formatBytes(config.received)} · Отдано {formatBytes(config.sent)}</small></span><Icon name="arrow" /></button>
           <button class="delete-button" onClick={() => remove(config.name)} aria-label={`Удалить ${config.name}`}><Icon name="trash" /></button>

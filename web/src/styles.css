@@ -67,6 +67,10 @@ input::placeholder { color: #5f5f5c; }
 .section-block { margin-top: 52px; }
 .section-title { margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .section-title p { margin: 0; font-size: .86rem; }
+.device-rule { margin-bottom: 18px; padding: 14px 17px; display: flex; align-items: center; gap: 10px; color: #dce9b5; background: #20291a; border: 1px solid #4a5f28; border-radius: 14px; font-size: .86rem; }
+.device-rule svg { flex: 0 0 auto; color: var(--lime); }
+.device-rule strong { color: var(--lime); }
+.device-rule span { color: #aeb89a; }
 .config-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .config-card { display: flex; align-items: stretch; background: var(--panel); border: 1px solid #292929; border-radius: 20px; transition: border-color .2s, transform .2s; }
 .config-card:hover { transform: translateY(-2px); border-color: #4b4b47; }
@@ -173,6 +177,8 @@ input::placeholder { color: #5f5f5c; }
   .stat-card strong { font-size: 1.8rem; }
   .section-title { align-items: flex-start; flex-direction: column; }
   .section-title .button { width: 100%; }
+  .device-rule { align-items: flex-start; flex-wrap: wrap; gap: 5px 9px; }
+  .device-rule span { flex-basis: calc(100% - 32px); margin-left: 32px; }
   .login-page { padding: 14px; }
   .login-card { padding: 26px 21px; border-radius: 25px; }
   .login-copy { margin: 48px 0 28px; }
