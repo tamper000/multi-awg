@@ -76,6 +76,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./amnezia-config:/app/amnezia-config
       - ./mihomo-config/example.yaml:/etc/mihomo_template.yaml:ro
+      - server-data:/data
     depends_on:
       - mihomo
       - amneziawg

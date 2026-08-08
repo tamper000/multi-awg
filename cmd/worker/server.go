@@ -24,6 +24,7 @@ type Server struct {
 	cli            *client.Client
 	containerName  string
 	confDir        string
+	peersDir       string
 	token          string
 	serverEndpoint string
 	mihomoTemplate string
@@ -33,6 +34,7 @@ type Server struct {
 type Config struct {
 	ContainerName  string
 	ConfDir        string
+	PeersDir       string
 	Token          string
 	ServerEndpoint string
 	MihomoTemplate string
@@ -43,6 +45,7 @@ func NewServer(cli *client.Client, cfg Config) *Server {
 		cli:            cli,
 		containerName:  cfg.ContainerName,
 		confDir:        cfg.ConfDir,
+		peersDir:       cfg.PeersDir,
 		token:          cfg.Token,
 		serverEndpoint: cfg.ServerEndpoint,
 		mihomoTemplate: cfg.MihomoTemplate,
@@ -84,7 +87,7 @@ func (s *Server) getStats(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -123,7 +126,7 @@ func (s *Server) getPeerStats(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -214,7 +217,7 @@ func (s *Server) createPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": fmt.Sprintf("load peers: %v", err)})
 		return
@@ -248,7 +251,7 @@ func (s *Server) createPeer(w http.ResponseWriter, r *http.Request) {
 	}
 	peers = append(peers, peer)
 
-	if err := savePeers(s.confDir, peers); err != nil {
+	if err := savePeers(s.peersDir, peers); err != nil {
 		writeJSON(w, 500, map[string]string{"error": fmt.Sprintf("save peers: %v", err)})
 		return
 	}
@@ -274,7 +277,7 @@ func (s *Server) listPeers(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -298,7 +301,7 @@ func (s *Server) getPeerConfig(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -334,7 +337,7 @@ func (s *Server) getPeerSub(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -423,7 +426,7 @@ func (s *Server) removePeers(w http.ResponseWriter, r *http.Request, names []str
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	peers, err := loadPeers(s.confDir)
+	peers, err := loadPeers(s.peersDir)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -455,7 +458,7 @@ func (s *Server) removePeers(w http.ResponseWriter, r *http.Request, names []str
 			return
 		}
 	}
-	if err := savePeers(s.confDir, kept); err != nil {
+	if err := savePeers(s.peersDir, kept); err != nil {
 		writeJSON(w, 500, map[string]string{"error": fmt.Sprintf("save peers: %v", err)})
 		return
 	}
@@ -492,7 +495,7 @@ func (s *Server) freezePeersAction(w http.ResponseWriter, r *http.Request, froze
 		return
 	}
 
-	matched, err := setPeersFrozen(s.confPath(), s.confDir, req.Names, frozen)
+	matched, err := setPeersFrozen(s.confPath(), s.peersDir, req.Names, frozen)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return

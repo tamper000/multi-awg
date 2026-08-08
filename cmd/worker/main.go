@@ -32,11 +32,16 @@ func main() {
 	}
 
 	awgConfDir := filepath.Join(pwd, "amnezia-config")
+	peersDir := os.Getenv("PEERS_DIR")
+	if peersDir == "" {
+		peersDir = awgConfDir
+	}
 	srv := &http.Server{
 		Addr: ":9090",
 		Handler: NewServer(cli, Config{
-			ContainerName:  amneziaName,
-			ConfDir:        awgConfDir,
+				ContainerName:  amneziaName,
+				ConfDir:        awgConfDir,
+				PeersDir:       peersDir,
 			Token:          os.Getenv("AUTH_TOKEN"),
 			ServerEndpoint: os.Getenv("SERVER_ENDPOINT"),
 			MihomoTemplate: os.Getenv("MIHOMO_TEMPLATE"),
