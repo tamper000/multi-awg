@@ -2,10 +2,16 @@ package db
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
+
+	"github.com/pressly/goose/v3"
 
 	_ "modernc.org/sqlite"
 )
+
+//go:embed migrations/*.sql
+var migrations embed.FS
 
 const (
 	UsersTable    = "users"
@@ -21,42 +27,19 @@ func Open(path string) (*sql.DB, error) {
 		return nil, err
 	}
 	if err := d.Ping(); err != nil {
+		d.Close()
 		return nil, err
 	}
-	if _, err := d.Exec(schema); err != nil {
-		return nil, fmt.Errorf("migrate: %w", err)
+
+	goose.SetBaseFS(migrations)
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		d.Close()
+		return nil, fmt.Errorf("set migration dialect: %w", err)
+	}
+	if err := goose.Up(d, "migrations"); err != nil {
+		d.Close()
+		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
 	return d, nil
 }
-
-const schema = `
-CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    username      TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'user',
-    expires_at    DATETIME,
-    frozen        INTEGER NOT NULL DEFAULT 0,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS peers (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL,
-    name       TEXT NOT NULL,
-    peer_name  TEXT NOT NULL UNIQUE,
-    sub_token  TEXT NOT NULL UNIQUE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE (user_id, name)
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL,
-    token_jti  TEXT NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-`
