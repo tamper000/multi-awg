@@ -71,7 +71,7 @@ func (s *Server) Handler() http.Handler {
 		r.Post("/api/peers/unfreeze", s.unfreezePeers)
 		r.Get("/api/peers/{name}/config", s.getPeerConfig)
 		r.Get("/api/peers/{name}/stats", s.getPeerStats)
-		r.Get("/api/peers/{name}/sub", s.getPeerSub)
+		r.Post("/api/peers/sub", s.getPeersSub)
 		r.Get("/api/stats", s.getStats)
 		r.Post("/api/sync", s.handleSync)
 	})
@@ -331,11 +331,20 @@ func (s *Server) getPeerConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]string{"config": clientConf})
 }
 
-func (s *Server) getPeerSub(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getPeersSub(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	name := chi.URLParam(r, "name")
+	var req struct {
+		Peers []struct {
+			Name        string `json:"name"`
+			DisplayName string `json:"display_name"`
+		} `json:"peers"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, 400, map[string]string{"error": "invalid request body"})
+		return
+	}
 
 	peers, err := loadPeers(s.peersDir)
 	if err != nil {
@@ -343,16 +352,16 @@ func (s *Server) getPeerSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var peer *Peer
-	for i := range peers {
-		if peers[i].Name == name {
-			peer = &peers[i]
-			break
-		}
+	selected := make([]Peer, 0, len(req.Peers))
+	displayNames := make(map[string]string, len(req.Peers))
+	for _, peer := range req.Peers {
+		displayNames[peer.Name] = peer.DisplayName
 	}
-	if peer == nil {
-		writeJSON(w, 404, map[string]string{"error": "peer not found"})
-		return
+	for _, peer := range peers {
+		if _, ok := displayNames[peer.Name]; ok {
+			peer.Name = displayNames[peer.Name]
+			selected = append(selected, peer)
+		}
 	}
 
 	confPath := s.confPath()
@@ -366,26 +375,17 @@ func (s *Server) getPeerSub(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
-	amneziaParams, _ := extractAmneziaParams(confPath)
-
-	clientConf := generateClientConfig(peer.PrivateKey, serverPubKey, peer.IP, peer.DNS, s.serverEndpoint, amneziaParams)
-
-	vpnLink, err := GenerateVPNURI([]byte(clientConf), shortPeerName(peer.Name))
-	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
-		return
-	}
-
 	var mihomoYaml string
 	tmpl, err := os.ReadFile(s.mihomoTemplate)
 	if err != nil {
 		slog.Error("read mihomo template", "err", err)
+		mihomoYaml, _ = generateMihomoConfig(&MihomoConfig{}, nil, "", "", nil)
 	} else {
 		var mihomoCfg MihomoConfig
 		if err := yaml.Unmarshal(tmpl, &mihomoCfg); err != nil {
 			slog.Error("parse mihomo template", "err", err)
 		} else {
-			mihomoYaml, err = generateMihomoConfig(&mihomoCfg, peer, serverPubKey, s.serverEndpoint, iface)
+			mihomoYaml, err = generateMihomoConfig(&mihomoCfg, selected, serverPubKey, s.serverEndpoint, iface)
 			if err != nil {
 				slog.Error("generate mihomo config", "err", err)
 				mihomoYaml = ""
@@ -394,17 +394,8 @@ func (s *Server) getPeerSub(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, 200, map[string]string{
-		"conf":        clientConf,
-		"vpn_link":    vpnLink,
 		"mihomo_yaml": mihomoYaml,
 	})
-}
-
-func shortPeerName(name string) string {
-	if _, after, ok := strings.Cut(name, "."); ok {
-		return after
-	}
-	return name
 }
 
 func (s *Server) deletePeers(w http.ResponseWriter, r *http.Request) {

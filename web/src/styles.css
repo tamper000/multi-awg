@@ -49,6 +49,8 @@ input::placeholder { color: #5f5f5c; }
 .topbar-user div { display: grid; }
 .topbar-user small { color: var(--muted); font-size: .7rem; }
 .sync-button { color: var(--lime); }
+.user-actions { width: 250px; display: grid; gap: 8px; justify-items: stretch; }
+.user-actions .button { width: 100%; }
 .user-dot { display: grid; place-items: center; width: 38px; height: 38px; color: #151515; background: var(--purple); border-radius: 12px; font-weight: 800; }
 .page { width: min(1180px, calc(100% - 48px)); margin: auto; padding: 64px 0 100px; }
 .page-heading { margin-bottom: 46px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
@@ -170,6 +172,7 @@ input::placeholder { color: #5f5f5c; }
   .page-heading { margin-bottom: 30px; align-items: stretch; flex-direction: column; gap: 10px; }
   .page-heading > div { min-width: 0; }
   .page-heading .button { width: 100%; }
+  .user-actions { width: 100%; }
   .stats-grid, .method-grid, .config-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .stat-card { min-height: 145px; padding: 19px; }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { api, jsonBody } from '../api.js'
-import { Empty, formatBytes, formatDate, Icon, Loader, Modal, Notice } from '../ui.jsx'
-import { navigate } from '../App.jsx'
+import { copyText, Empty, formatBytes, formatDate, Icon, Loader, Modal, Notice } from '../ui.jsx'
 import Layout from './Layout.jsx'
 
 export default function UserPanel({ user, onLogout }) {
@@ -10,6 +9,7 @@ export default function UserPanel({ user, onLogout }) {
   const [error, setError] = useState('')
   const [modal, setModal] = useState('')
   const [pwDone, setPwDone] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   async function load() {
     setError('')
@@ -24,8 +24,8 @@ export default function UserPanel({ user, onLogout }) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     try {
-      const created = await api('/api/user/configs', { method: 'POST', body: jsonBody({ name: form.get('name') }) })
-      setModal(''); navigate(`/subscription/${created.sub_token}`)
+      await api('/api/user/configs', { method: 'POST', body: jsonBody({ name: form.get('name') }) })
+      setModal(''); load()
     } catch {}
   }
 
@@ -45,7 +45,8 @@ export default function UserPanel({ user, onLogout }) {
   }
 
   const expired = info?.days_left === 0
-  return <Layout user={user} onLogout={onLogout} title={`Привет, ${user.username}`} subtitle="Ваши защищённые подключения в одном месте" action={<button class="button button-primary" onClick={() => setModal('create')} disabled={expired}><Icon name="plus" /> Новый конфиг</button>}>
+  const subscriptionUrl = info?.subscription_url && `${location.origin}${info.subscription_url}`
+  return <Layout user={user} onLogout={onLogout} title={`Привет, ${user.username}`} subtitle="Ваши защищённые подключения в одном месте" action={<div class="user-actions"><button class="button button-primary" onClick={() => setModal('create')} disabled={expired}><Icon name="plus" /> Новый конфиг</button>{subscriptionUrl && <button class="button button-ghost" onClick={() => copyText(subscriptionUrl, setCopied)}><Icon name="link" /> {copied ? 'Скопировано' : 'Ссылка для подключения'}</button>}</div>}>
     <Notice>{error}</Notice>
     {expired && <Notice kind="warning">Подписка истекла: существующие конфиги заморожены, новые создать нельзя.</Notice>}
     {!info || !configs ? <Loader /> : <>
@@ -58,7 +59,7 @@ export default function UserPanel({ user, onLogout }) {
         <div class="section-title"><div><h2>Мои устройства</h2><p>Нажмите на конфиг, чтобы открыть способы подключения</p></div><button class="button button-ghost" onClick={() => setModal('password')}><Icon name="key" /> Сменить пароль</button></div>
         <div class="device-rule"><Icon name="bolt" /><strong>1 конфиг = 1 устройство</strong><span>Для другого устройства создайте отдельный конфиг</span></div>
         {!configs.length ? <Empty title="Устройств пока нет" text="Создайте первый конфиг и подключитесь за пару минут." /> : <div class="config-grid">{configs.map((config) => <article class="config-card" key={config.name}>
-          <button class="config-main" onClick={() => navigate(`/subscription/${config.sub_token}`)}><span class="device-icon"><Icon name="bolt" /></span><span><strong>{config.name}</strong><small>Получено {formatBytes(config.received)} · Отдано {formatBytes(config.sent)}</small></span><Icon name="arrow" /></button>
+          <a class="config-main" href={`${subscriptionUrl?.replace(/\/mihomo$/, '')}/conf?name=${encodeURIComponent(config.name)}`}><span class="device-icon"><Icon name="bolt" /></span><span><strong>{config.name}</strong><small>Получено {formatBytes(config.received)} · Отдано {formatBytes(config.sent)}</small></span><Icon name="download" /></a>
           <button class="delete-button" onClick={() => remove(config.name)} aria-label={`Удалить ${config.name}`}><Icon name="trash" /></button>
         </article>)}</div>}
       </section>

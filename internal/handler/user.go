@@ -48,7 +48,7 @@ func (h *Handler) listConfigs(w http.ResponseWriter, r *http.Request) {
 
 	resp := make([]map[string]interface{}, 0, len(peers))
 	for _, p := range peers {
-		item := map[string]interface{}{"name": p.Name, "sub_token": p.SubToken}
+		item := map[string]interface{}{"name": p.Name}
 		if s, ok := statsByName[p.PeerName]; ok {
 			item["received"] = s.Received
 			item["sent"] = s.Sent
@@ -93,10 +93,11 @@ func (h *Handler) userInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, 200, map[string]interface{}{
-		"username":   user.Username,
-		"role":       user.Role,
-		"expires_at": user.ExpiresAt,
-		"days_left":  daysLeft,
+		"username":         user.Username,
+		"role":             user.Role,
+		"expires_at":       user.ExpiresAt,
+		"days_left":        daysLeft,
+		"subscription_url": "/api/sub/" + user.SubToken + "/mihomo",
 	})
 }
 
@@ -238,7 +239,7 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, status, map[string]interface{}{"name": req.Name, "sub_token": peer.SubToken})
+	writeJSON(w, status, map[string]interface{}{"name": req.Name})
 }
 
 func (h *Handler) deleteConfig(w http.ResponseWriter, r *http.Request) {

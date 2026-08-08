@@ -73,8 +73,12 @@ func (c *Client) GetPeerConfig(ctx context.Context, name string) (int, interface
 	return resp.StatusCode, cfg, nil
 }
 
-func (c *Client) GetPeerSub(ctx context.Context, name string) (int, interface{}, error) {
-	resp, err := c.do(ctx, http.MethodGet, "/api/peers/"+url.PathEscape(name)+"/sub", nil)
+func (c *Client) GetPeersSub(ctx context.Context, peers []SubPeer) (int, interface{}, error) {
+	body, err := json.Marshal(map[string][]SubPeer{"peers": peers})
+	if err != nil {
+		return 0, nil, err
+	}
+	resp, err := c.do(ctx, http.MethodPost, "/api/peers/sub", bytes.NewReader(body))
 	if err != nil {
 		return 0, nil, err
 	}
