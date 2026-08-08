@@ -112,8 +112,8 @@ func (s *Server) getStats(w http.ResponseWriter, r *http.Request) {
 		result = append(result, statResp{
 			Name:          p.Name,
 			IP:            p.IP,
-			Received:      st.RxBytes,
-			Sent:          st.TxBytes,
+			Received:      st.TxBytes,
+			Sent:          st.RxBytes,
 			LastHandshake: st.LastHandshake,
 		})
 	}
@@ -154,8 +154,8 @@ func (s *Server) getPeerStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]interface{}{
 		"name":           peer.Name,
 		"ip":             peer.IP,
-		"received":       st.RxBytes,
-		"sent":           st.TxBytes,
+		"received":       st.TxBytes,
+		"sent":           st.RxBytes,
 		"last_handshake": st.LastHandshake,
 	})
 }
