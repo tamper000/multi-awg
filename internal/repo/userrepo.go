@@ -2,7 +2,9 @@ package repo
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -44,6 +46,10 @@ func (r *UserRepo) CreateUser(ctx context.Context,
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
+	tokenBytes := make([]byte, 16)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return fmt.Errorf("generate subscription token: %w", err)
+	}
 
 	_, err = r.db.Insert(db.UsersTable).Rows(
 		models.User{
@@ -52,6 +58,7 @@ func (r *UserRepo) CreateUser(ctx context.Context,
 			PasswordHash: hash,
 			ExpiresAt:    expiresAt,
 			Frozen:       false,
+			SubToken:     hex.EncodeToString(tokenBytes),
 		},
 	).Executor().ExecContext(ctx)
 	if err != nil {
@@ -82,6 +89,20 @@ func (r *UserRepo) GetByID(ctx context.Context, id int64) (*models.User, error) 
 		ScanStruct(&u)
 	if err != nil {
 		return nil, fmt.Errorf("get user by id: %w", err)
+	}
+	if !found {
+		return nil, ErrNotFound
+	}
+	return &u, nil
+}
+
+func (r *UserRepo) GetBySubToken(ctx context.Context, token string) (*models.User, error) {
+	var u models.User
+	found, err := r.db.From(db.UsersTable).
+		Where(goqu.C("sub_token").Eq(token)).
+		ScanStruct(&u)
+	if err != nil {
+		return nil, fmt.Errorf("get user by subscription token: %w", err)
 	}
 	if !found {
 		return nil, ErrNotFound

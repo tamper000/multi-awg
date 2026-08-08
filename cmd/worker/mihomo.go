@@ -7,29 +7,45 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-func generateMihomoConfig(config *MihomoConfig, peer *Peer, serverPubKey, endpoint string, iface map[string]string) (string, error) {
-	proxies := config.Proxies
-	if len(proxies) == 0 {
+func generateMihomoConfig(config *MihomoConfig, peers []Peer, serverPubKey, endpoint string, iface map[string]string) (string, error) {
+	if len(config.Proxies) == 0 && len(peers) > 0 {
 		return "", errors.New("empty proxies")
 	}
-	proxyGroup := config.ProxyGroups
-	if len(proxyGroup) == 0 {
+	if len(config.ProxyGroups) == 0 && len(peers) > 0 {
 		return "", errors.New("empty proxy groups")
 	}
+	if len(peers) == 0 {
+		config.Proxies = []Proxy{{Name: "Нету конфигов", Type: "direct"}}
+		if len(config.ProxyGroups) == 0 {
+			config.ProxyGroups = []ProxyGroup{{Name: "🌐 Обход РФ", Type: "select"}}
+		}
+		for i := range config.ProxyGroups {
+			config.ProxyGroups[i].Proxies = []string{"Нету конфигов"}
+		}
+		data, err := yaml.Marshal(config)
+		return string(data), err
+	}
 
-	proxy := &proxies[0]
-	proxy.Name = shortPeerName(peer.Name)
-	proxy.PrivateKey = peer.PrivateKey
-	proxy.PublicKey = serverPubKey
-
+	base := config.Proxies[0]
+	proxies := make([]Proxy, 0, len(peers))
+	proxyNames := make([]string, 0, len(peers))
 	serverIP, serverPort, _ := strings.Cut(endpoint, ":")
-	proxy.Server = serverIP
-	proxy.Port = serverPort
+	for _, peer := range peers {
+		proxy := base
+		proxy.Name = peer.Name
+		proxy.PrivateKey = peer.PrivateKey
+		proxy.PublicKey = serverPubKey
+		proxy.Server = serverIP
+		proxy.Port = serverPort
+		proxy.IP = peer.IP
+		proxies = append(proxies, proxy)
+		proxyNames = append(proxyNames, proxy.Name)
+	}
+	config.Proxies = proxies
 
-	proxy.IP = peer.IP
-
-	// AmneziaWG params
-	params := proxy.AmneziaWGOption
+	// AmneziaWGOption хранится указателем, поэтому эти параметры выставляются
+	// через общий объект и применяются ко всем прокси.
+	params := config.Proxies[0].AmneziaWGOption
 	params.JC = iface["Jc"]
 	params.JMin = iface["Jmin"]
 	params.JMax = iface["Jmax"]
@@ -66,7 +82,7 @@ func generateMihomoConfig(config *MihomoConfig, peer *Peer, serverPubKey, endpoi
 	}
 
 	for i := range config.ProxyGroups {
-		config.ProxyGroups[i].Proxies = []string{proxy.Name}
+		config.ProxyGroups[i].Proxies = proxyNames
 	}
 
 	data, err := yaml.Marshal(config)

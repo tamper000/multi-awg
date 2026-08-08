@@ -2,9 +2,7 @@ package repo
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,30 +27,15 @@ func NewPeerRepo(db *sql.DB) *PeerRepo {
 	}
 }
 
-func generateSubToken() (string, error) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
-
 func (r *PeerRepo) CreatePeer(ctx context.Context, userID int64, name string) (*models.Peer, error) {
-	subToken, err := generateSubToken()
-	if err != nil {
-		return nil, fmt.Errorf("generate sub token: %w", err)
-	}
-
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin peer transaction: %w", err)
 	}
 
 	peer := models.Peer{
-		UserID:   userID,
-		Name:     name,
-		PeerName: subToken,
-		SubToken: subToken,
+		UserID: userID,
+		Name:   name,
 	}
 
 	err = tx.Wrap(func() error {
@@ -92,20 +75,6 @@ func isPeerNameExists(err error) bool {
 	return errors.As(err, &sqliteErr) &&
 		sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE &&
 		strings.Contains(sqliteErr.Error(), "peers.user_id, peers.name")
-}
-
-func (r *PeerRepo) GetBySubToken(ctx context.Context, token string) (*models.Peer, error) {
-	var p models.Peer
-	found, err := r.db.From(db.PeersTable).
-		Where(goqu.C("sub_token").Eq(token)).
-		ScanStruct(&p)
-	if err != nil {
-		return nil, fmt.Errorf("get peer by sub token: %w", err)
-	}
-	if !found {
-		return nil, ErrNotFound
-	}
-	return &p, nil
 }
 
 func (r *PeerRepo) ListByUser(ctx context.Context, userID int64) ([]models.Peer, error) {

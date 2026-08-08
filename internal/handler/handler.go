@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/tamper000/multi-awg/internal/auth"
 	"github.com/tamper000/multi-awg/internal/models"
+	"github.com/tamper000/multi-awg/internal/worker"
 )
 
 // Config — from env
@@ -33,6 +34,7 @@ type UserRepo interface {
 	DeleteUser(ctx context.Context, id int64) error
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
 	GetByID(ctx context.Context, id int64) (*models.User, error)
+	GetBySubToken(ctx context.Context, token string) (*models.User, error)
 	ListUsers(ctx context.Context) ([]models.User, error)
 	UpdateExpiry(ctx context.Context, id int64, expiresAt *time.Time) error
 	UpdatePassword(ctx context.Context, id int64, plainPassword string) error
@@ -48,7 +50,6 @@ type SessionRepo interface {
 type PeerRepo interface {
 	CreatePeer(ctx context.Context, userID int64, name string) (*models.Peer, error)
 	DeleteByID(ctx context.Context, id int64) error
-	GetBySubToken(ctx context.Context, token string) (*models.Peer, error)
 	GetByUserAndName(ctx context.Context, userID int64, name string) (*models.Peer, error)
 	ListByUser(ctx context.Context, userID int64) ([]models.Peer, error)
 }
@@ -59,7 +60,7 @@ type WorkerClient interface {
 	DeletePeers(ctx context.Context, names []string) (int, interface{}, error)
 	FreezePeers(ctx context.Context, names []string) (int, interface{}, error)
 	GetPeerConfig(ctx context.Context, name string) (int, interface{}, error)
-	GetPeerSub(ctx context.Context, name string) (int, interface{}, error)
+	GetPeersSub(ctx context.Context, peers []worker.SubPeer) (int, interface{}, error)
 	GetPeerStats(ctx context.Context, name string) (int, interface{}, error)
 	GetStats(ctx context.Context) (int, interface{}, error)
 	Sync(ctx context.Context) (int, interface{}, error)
@@ -120,6 +121,7 @@ func (h *Handler) Routes() http.Handler {
 		r.Get("/{token}", h.subConfig)
 		r.Get("/{token}/mihomo", h.subMihomo)
 		r.Get("/{token}/conf", h.subConf)
+		r.Get("/{token}/conf/{name}", h.subConf)
 	})
 
 	if h.config.StaticDir != "" {

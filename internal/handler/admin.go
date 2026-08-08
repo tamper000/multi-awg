@@ -116,7 +116,7 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 
 	configs := make([]map[string]interface{}, 0, len(peers))
 	for _, p := range peers {
-		cfg := map[string]interface{}{"name": p.Name, "sub_token": p.SubToken}
+		cfg := map[string]interface{}{"name": p.Name}
 		if s, ok := statsByName[p.PeerName]; ok {
 			cfg["ip"] = s.IP
 			cfg["received"] = s.Received

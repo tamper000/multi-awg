@@ -8,6 +8,7 @@ type User struct {
 	Role         string     `db:"role" json:"role"`
 	ExpiresAt    *time.Time `db:"expires_at" json:"expires_at"`
 	Frozen       bool       `db:"frozen" json:"frozen"`
+	SubToken     string     `db:"sub_token" json:"-"`
 	PasswordHash string     `db:"password_hash" json:"-"`
 	CreatedAt    time.Time  `db:"created_at" goqu:"skipinsert" json:"created_at"`
 }
@@ -17,6 +18,5 @@ type Peer struct {
 	UserID    int64     `db:"user_id" json:"-"`
 	Name      string    `db:"name" json:"name"`
 	PeerName  string    `db:"peer_name" json:"-"`
-	SubToken  string    `db:"sub_token" json:"sub_token"`
 	CreatedAt time.Time `db:"created_at" goqu:"skipinsert" json:"created_at"`
 }

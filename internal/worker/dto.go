@@ -17,6 +17,11 @@ type Sub struct {
 	MihomoYaml string `json:"mihomo_yaml"`
 }
 
+type SubPeer struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+}
+
 type Stats struct {
 	Name          string `json:"name"`
 	IP            string `json:"ip"`

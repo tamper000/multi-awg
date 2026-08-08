@@ -3,7 +3,6 @@ import { session } from './api.js'
 import { Toast } from './ui.jsx'
 import Login from './pages/Login.jsx'
 import UserPanel from './pages/UserPanel.jsx'
-import Subscription from './pages/Subscription.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import AdminUser from './pages/AdminUser.jsx'
 
@@ -29,8 +28,6 @@ export default function App() {
     }
   }, [])
 
-  const subscriptionToken = path.match(/^\/subscription\/([^/]+)$/)?.[1]
-  if (subscriptionToken) return <><Subscription token={subscriptionToken} user={user} /><Toast /></>
   const loginLink = path === '/login' && new URLSearchParams(location.hash.slice(1)).has('password')
   if (loginLink) return <><Login onLogin={(nextUser) => setUser(nextUser)} /><Toast /></>
   if (!user || !session.token()) return <><Login onLogin={(nextUser) => setUser(nextUser)} /><Toast /></>
