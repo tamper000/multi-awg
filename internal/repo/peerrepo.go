@@ -5,13 +5,19 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/sqlite3"
 	"github.com/tamper000/multi-awg/internal/db"
 	"github.com/tamper000/multi-awg/internal/models"
+	"modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
+
+var ErrPeerNameExists = errors.New("peer name already exists")
 
 type PeerRepo struct {
 	db *goqu.Database
@@ -45,7 +51,7 @@ func (r *PeerRepo) CreatePeer(ctx context.Context, userID int64, name string) (*
 	peer := models.Peer{
 		UserID:   userID,
 		Name:     name,
-		PeerName: "",
+		PeerName: subToken,
 		SubToken: subToken,
 	}
 
@@ -54,6 +60,9 @@ func (r *PeerRepo) CreatePeer(ctx context.Context, userID int64, name string) (*
 			peer,
 		).Executor().ExecContext(ctx)
 		if err != nil {
+			if isPeerNameExists(err) {
+				return ErrPeerNameExists
+			}
 			return fmt.Errorf("create peer: %w", err)
 		}
 
@@ -76,6 +85,13 @@ func (r *PeerRepo) CreatePeer(ctx context.Context, userID int64, name string) (*
 	})
 
 	return &peer, err
+}
+
+func isPeerNameExists(err error) bool {
+	var sqliteErr *sqlite.Error
+	return errors.As(err, &sqliteErr) &&
+		sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE &&
+		strings.Contains(sqliteErr.Error(), "peers.user_id, peers.name")
 }
 
 func (r *PeerRepo) GetBySubToken(ctx context.Context, token string) (*models.Peer, error) {

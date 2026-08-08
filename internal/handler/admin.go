@@ -242,13 +242,21 @@ func (h *Handler) patchUser(w http.ResponseWriter, r *http.Request) {
 	for _, peer := range peers {
 		names = append(names, peer.PeerName)
 	}
-	status, _, err := h.worker.UnfreezePeers(r.Context(), names)
+	status, body, err := h.worker.UnfreezePeers(r.Context(), names)
 	if err != nil {
 		slog.Error("unfreeze peers", "names", names, "err", err)
-	} else if status < 400 {
-		if err := h.repo.SetFrozen(r.Context(), user.ID, false); err != nil {
-			slog.Error("set unfrozen", "userID", user.ID, "err", err)
-		}
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
+	}
+	if status >= 400 {
+		slog.Error("unfreeze peers", "names", names, "status", status, "body", body)
+		writeJSON(w, status, body)
+		return
+	}
+	if err := h.repo.SetFrozen(r.Context(), user.ID, false); err != nil {
+		slog.Error("set unfrozen", "userID", user.ID, "err", err)
+		writeJSON(w, 500, map[string]string{"error": "internal error"})
+		return
 	}
 	writeJSON(w, 200, map[string]interface{}{
 		"username":   user.Username,

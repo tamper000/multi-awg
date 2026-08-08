@@ -216,6 +216,10 @@ func (h *Handler) createConfig(w http.ResponseWriter, r *http.Request) {
 
 	peer, err := h.peers.CreatePeer(r.Context(), userID, req.Name)
 	if err != nil {
+		if errors.Is(err, repo.ErrPeerNameExists) {
+			writeJSON(w, 409, map[string]string{"error": "peer name already exists"})
+			return
+		}
 		slog.Error("create peer in db", "userID", userID, "name", req.Name, "err", err)
 		writeJSON(w, 500, map[string]string{"error": "internal error"})
 		return
@@ -258,7 +262,12 @@ func (h *Handler) deleteConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	peer, err := h.peers.GetByUserAndName(r.Context(), userID, name)
 	if err != nil {
-		writeJSON(w, 404, map[string]string{"error": "config not found"})
+		if errors.Is(err, repo.ErrNotFound) {
+			writeJSON(w, 404, map[string]string{"error": "config not found"})
+		} else {
+			slog.Error("get peer", "userID", userID, "name", name, "err", err)
+			writeJSON(w, 500, map[string]string{"error": "internal error"})
+		}
 		return
 	}
 	status, body, err := h.worker.DeletePeer(r.Context(), peer.PeerName)

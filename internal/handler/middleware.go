@@ -38,7 +38,7 @@ func (h *Handler) authMiddleware(next http.Handler) http.Handler {
 		exists, err := h.sessions.SessionExists(r.Context(), claims.JTI)
 		if err != nil {
 			slog.Error("session exists", "jti", claims.JTI, "err", err)
-			writeJSON(w, 401, map[string]string{"error": "unauthorized"})
+			writeJSON(w, 500, map[string]string{"error": "internal error"})
 			return
 		}
 		if !exists {
@@ -56,8 +56,8 @@ func (h *Handler) authMiddleware(next http.Handler) http.Handler {
 func (h *Handler) adminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := ClaimsFromContext(r.Context())
-		if !ok || claims.Role != repo.RoleAdmin {
-			slog.Debug("admin access denied", "role", claims.Role)
+		if !ok || claims == nil || claims.Role != repo.RoleAdmin {
+			slog.Debug("admin access denied")
 			writeJSON(w, 403, map[string]string{"error": "forbidden"})
 			return
 		}
