@@ -1,29 +1,4 @@
 services:
-  mihomo:
-    image: metacubex/mihomo:Alpha
-    container_name: mihomo-core
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    sysctls:
-      net.ipv4.ip_forward: "1"
-      net.ipv4.conf.all.src_valid_mark: "1"
-      net.ipv4.conf.all.rp_filter: "2"
-      net.ipv4.conf.default.rp_filter: "2"
-    volumes:
-      - ./mihomo-config:/root/.config/mihomo
-    ports:
-      - "5060:51821/udp" # expose awg port to host
-    networks:
-      - vpn
-    healthcheck:
-      test: "pidof mihomo"
-      interval: "10s"
-      timeout: "2s"
-      retries: 3
-      start_period: "10s"
-
   amneziawg:
     image: docker.io/amneziavpn/amneziawg-go:latest
     container_name: amneziawg
@@ -34,10 +9,11 @@ services:
     volumes:
       - ./amnezia-config:/etc/amnezia/amneziawg:ro
       - ./scripts:/scripts:ro
-    command: sh -c "./scripts/up.sh awg0 mihomo0 && tail -f /dev/null"
-    network_mode: service:mihomo
-    depends_on:
-      - mihomo
+    command: sh -c "/scripts/up.sh awg0 && exec tail -f /dev/null"
+    ports:
+      - "5060:51821/udp"
+    networks:
+      - vpn
     healthcheck:
       test: "test -d /sys/class/net/awg0"
       interval: "10s"
@@ -52,10 +28,10 @@ services:
       - ./awg-proxy/proxy.toml:/workdir/proxy.toml:ro
       - ./amnezia-config/awg0.conf:/workdir/awg0.conf:ro
     command: ["/workdir/proxy.toml"]
-    network_mode: service:mihomo
+    network_mode: service:amneziawg
     depends_on:
-      - amneziawg
-      - mihomo
+      amneziawg:
+        condition: service_healthy
     healthcheck:
       test: "pidof proxy"
       interval: "10s"
@@ -74,9 +50,8 @@ services:
       - ./mihomo-config/example.yaml:/etc/mihomo_template.yaml:ro
       - server-data:/data
     depends_on:
-      - mihomo
       - amneziawg
-      # - awg-proxy
+      - awg-proxy
 
   server:
     image: ghcr.io/tamper000/multi-awg-server:latest
