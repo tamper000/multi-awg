@@ -130,6 +130,14 @@ func peerIP(allowedIPs string) string {
 	return allowedIPs
 }
 
+func interfaceMTU(iface map[string]string) int {
+	mtu, err := strconv.Atoi(iface["MTU"])
+	if err != nil || mtu <= 0 {
+		return mtuDefault
+	}
+	return mtu
+}
+
 // --- Statistics ---
 
 type peerStats struct {
@@ -426,13 +434,13 @@ func setPeersFrozen(confPath, confDir string, names []string, frozen bool) (int,
 
 // --- Client config generation ---
 
-func generateClientConfig(privateKey, serverPubKey, ip, dns, endpoint, amneziaParams string) string {
+func generateClientConfig(privateKey, serverPubKey, ip, dns, endpoint, amneziaParams string, mtu int) string {
 	var b strings.Builder
 	b.WriteString("[Interface]\n")
 	b.WriteString(fmt.Sprintf("PrivateKey = %s\n", privateKey))
 	b.WriteString(fmt.Sprintf("Address = %s/32\n", ip))
 	b.WriteString(fmt.Sprintf("DNS = %s\n", dns))
-	b.WriteString(fmt.Sprintf("MTU = %d\n", mtuDefault))
+	b.WriteString(fmt.Sprintf("MTU = %d\n", mtu))
 	b.WriteString("\n")
 	if amneziaParams != "" {
 		b.WriteString(amneziaParams)

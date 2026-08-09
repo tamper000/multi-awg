@@ -3,12 +3,8 @@ package main
 import "time"
 
 const (
-	subnet      = "10.0.0."
-	subnetMask  = "/32"
-	startIP     = 3 // first client IP: 10.0.0.3
-	wgInterface = "awg0"
-	dnsDefault  = "94.140.14.14"
-	mtuDefault  = 1280
+	dnsDefault = "94.140.14.14"
+	mtuDefault = 1420
 )
 
 type Peer struct {

@@ -38,6 +38,7 @@ func generateMihomoConfig(config *MihomoConfig, peers []Peer, serverPubKey, endp
 		proxy.Server = serverIP
 		proxy.Port = serverPort
 		proxy.IP = peer.IP
+		proxy.MTU = interfaceMTU(iface)
 		proxies = append(proxies, proxy)
 		proxyNames = append(proxyNames, proxy.Name)
 	}

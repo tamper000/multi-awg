@@ -263,7 +263,12 @@ func (s *Server) createPeer(w http.ResponseWriter, r *http.Request) {
 
 	serverPubKey, _ := extractServerPublicKey(confPath)
 	amneziaParams, _ := extractAmneziaParams(confPath)
-	clientConf := generateClientConfig(privKey, serverPubKey, ip, req.DNS, s.serverEndpoint, amneziaParams)
+	iface, _, _, err := parseWGConfig(confPath)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	clientConf := generateClientConfig(privKey, serverPubKey, ip, req.DNS, s.serverEndpoint, amneziaParams, interfaceMTU(iface))
 
 	writeJSON(w, 201, map[string]interface{}{
 		"name":       peer.Name,
@@ -326,7 +331,12 @@ func (s *Server) getPeerConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	amneziaParams, _ := extractAmneziaParams(confPath)
-	clientConf := generateClientConfig(peer.PrivateKey, serverPubKey, peer.IP, peer.DNS, s.serverEndpoint, amneziaParams)
+	iface, _, _, err := parseWGConfig(confPath)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	clientConf := generateClientConfig(peer.PrivateKey, serverPubKey, peer.IP, peer.DNS, s.serverEndpoint, amneziaParams, interfaceMTU(iface))
 
 	writeJSON(w, 200, map[string]string{"config": clientConf})
 }

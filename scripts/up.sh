@@ -31,14 +31,27 @@ if [[ -z "$AWG_ADDR" ]]; then
     exit 1
 fi
 if [[ -z "$AWG_MTU" ]]; then
-    AWG_MTU=1280
+    AWG_MTU=1420
 fi
 ip -4 address add "$AWG_ADDR" dev "$AWG_IF"
 ip link set mtu "$AWG_MTU" up dev "$AWG_IF"
 ip link set dev "$AWG_IF" up
+
+# Direct NAT through the container's external interface.
+iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
-# Disable routing
+# Allow AWG clients out and only established traffic back in.
+iptables -D FORWARD -i "$AWG_IF" -o eth0 -j ACCEPT 2>/dev/null || true
+iptables -D FORWARD -i eth0 -o "$AWG_IF" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || true
+iptables -I FORWARD 1 -i "$AWG_IF" -o eth0 -j ACCEPT
+iptables -I FORWARD 1 -i eth0 -o "$AWG_IF" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# Drop invalid conntrack packets before forwarding.
+iptables -D FORWARD -m conntrack --ctstate INVALID -j DROP 2>/dev/null || true
+iptables -I FORWARD 2 -m conntrack --ctstate INVALID -j DROP
+
+# Disable routing to mihomo
 exit 0
 
 echo "[*] Initializing routing: $AWG_IF -> $MIHOMO_IF via fwmark"

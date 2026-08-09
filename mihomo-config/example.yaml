@@ -22,7 +22,7 @@ proxies:
     public-key: public_key
     allowed-ips: ["0.0.0.0/0"]
     persistent-keepalive: 25
-    mtu: 1280
+    mtu: 1420
     amnezia-wg-option:
       jc: 3
       jmin: 123
