@@ -1,0 +1,8 @@
+-- +goose Up
+
+ALTER TABLE peers ADD COLUMN traffic_received INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE peers ADD COLUMN traffic_sent INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE peers ADD COLUMN last_received_counter INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE peers ADD COLUMN last_sent_counter INTEGER NOT NULL DEFAULT 0;
+
+-- +goose Down
