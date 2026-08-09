@@ -7,6 +7,7 @@ import (
 
 	"github.com/tamper000/multi-awg/internal/models"
 	"github.com/tamper000/multi-awg/internal/repo"
+	"github.com/tamper000/multi-awg/internal/worker"
 )
 
 type UserRepo interface {
@@ -16,10 +17,13 @@ type UserRepo interface {
 
 type PeerRepo interface {
 	ListByUser(ctx context.Context, userID int64) ([]models.Peer, error)
+	ListAll(ctx context.Context) ([]models.Peer, error)
+	UpdateTraffic(ctx context.Context, id, received, sent, receivedCounter, sentCounter int64) error
 }
 
 type WorkerClient interface {
 	FreezePeers(ctx context.Context, names []string) (int, interface{}, error)
+	GetStats(ctx context.Context) (int, interface{}, error)
 }
 
 type Service struct {
@@ -38,6 +42,7 @@ func New(userRepo UserRepo, peerRepo PeerRepo, worker WorkerClient) *Service {
 
 func (s *Service) Start(ctx context.Context) {
 	s.cleanup(ctx)
+	s.collectTraffic(ctx)
 
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
@@ -46,10 +51,57 @@ func (s *Service) Start(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			s.cleanup(ctx)
+			s.collectTraffic(ctx)
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (s *Service) collectTraffic(ctx context.Context) {
+	status, body, err := s.worker.GetStats(ctx)
+	if err != nil {
+		slog.Error("get traffic stats", "err", err)
+		return
+	}
+	if status >= 400 {
+		slog.Error("get traffic stats", "status", status, "body", body)
+		return
+	}
+
+	stats, ok := body.([]worker.Stats)
+	if !ok {
+		slog.Error("get traffic stats", "error", "unexpected worker response")
+		return
+	}
+	statsByName := make(map[string]worker.Stats, len(stats))
+	for _, stat := range stats {
+		statsByName[stat.Name] = stat
+	}
+
+	peers, err := s.peerRepo.ListAll(ctx)
+	if err != nil {
+		slog.Error("list peers for traffic", "err", err)
+		return
+	}
+	for _, peer := range peers {
+		stat, ok := statsByName[peer.PeerName]
+		if !ok {
+			continue
+		}
+		received := peer.TrafficReceived + trafficDelta(peer.LastReceivedCounter, stat.Received)
+		sent := peer.TrafficSent + trafficDelta(peer.LastSentCounter, stat.Sent)
+		if err := s.peerRepo.UpdateTraffic(ctx, peer.ID, received, sent, stat.Received, stat.Sent); err != nil {
+			slog.Error("update peer traffic", "peerID", peer.ID, "err", err)
+		}
+	}
+}
+
+func trafficDelta(previous, current int64) int64 {
+	if current < previous {
+		return current
+	}
+	return current - previous
 }
 
 func (s *Service) cleanup(ctx context.Context) {

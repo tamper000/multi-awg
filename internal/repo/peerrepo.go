@@ -88,6 +88,29 @@ func (r *PeerRepo) ListByUser(ctx context.Context, userID int64) ([]models.Peer,
 	return peers, nil
 }
 
+func (r *PeerRepo) ListAll(ctx context.Context) ([]models.Peer, error) {
+	var peers []models.Peer
+	if err := r.db.From(db.PeersTable).
+		Order(goqu.C("id").Asc()).
+		ScanStructs(&peers); err != nil {
+		return nil, fmt.Errorf("list all peers: %w", err)
+	}
+	return peers, nil
+}
+
+func (r *PeerRepo) UpdateTraffic(ctx context.Context, id, received, sent, receivedCounter, sentCounter int64) error {
+	_, err := r.db.Update(db.PeersTable).Set(goqu.Record{
+		"traffic_received":      received,
+		"traffic_sent":          sent,
+		"last_received_counter": receivedCounter,
+		"last_sent_counter":     sentCounter,
+	}).Where(goqu.C("id").Eq(id)).Executor().ExecContext(ctx)
+	if err != nil {
+		return fmt.Errorf("update peer traffic: %w", err)
+	}
+	return nil
+}
+
 func (r *PeerRepo) GetByUserAndName(ctx context.Context, userID int64, name string) (*models.Peer, error) {
 	var p models.Peer
 	found, err := r.db.From(db.PeersTable).

@@ -35,25 +35,13 @@ func (h *Handler) listConfigs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statsByName := map[string]worker.Stats{}
-	if status, body, err := h.worker.GetStats(r.Context()); err != nil {
-		slog.Error("get stats from worker", "err", err)
-	} else if status >= 400 {
-		slog.Error("get stats from worker", "status", status, "body", body)
-	} else if stats, ok := body.([]worker.Stats); ok {
-		for _, s := range stats {
-			statsByName[s.Name] = s
-		}
-	}
-
 	resp := make([]map[string]interface{}, 0, len(peers))
 	for _, p := range peers {
-		item := map[string]interface{}{"name": p.Name}
-		if s, ok := statsByName[p.PeerName]; ok {
-			item["received"] = s.Received
-			item["sent"] = s.Sent
-		}
-		resp = append(resp, item)
+		resp = append(resp, map[string]interface{}{
+			"name":     p.Name,
+			"received": p.TrafficReceived,
+			"sent":     p.TrafficSent,
+		})
 	}
 	writeJSON(w, 200, resp)
 }
@@ -148,14 +136,8 @@ func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 	if cfg, ok := body.(worker.PeerConfig); ok {
 		resp["config"] = cfg.Config
 	}
-	if status, body, err := h.worker.GetPeerStats(r.Context(), peer.PeerName); err != nil {
-		slog.Error("get peer stats from worker", "peer", peer.PeerName, "err", err)
-	} else if status < 400 {
-		if st, ok := body.(worker.Stats); ok {
-			resp["received"] = st.Received
-			resp["sent"] = st.Sent
-		}
-	}
+	resp["received"] = peer.TrafficReceived
+	resp["sent"] = peer.TrafficSent
 	writeJSON(w, 200, resp)
 }
 

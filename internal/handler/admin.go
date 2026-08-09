@@ -116,11 +116,13 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
 
 	configs := make([]map[string]interface{}, 0, len(peers))
 	for _, p := range peers {
-		cfg := map[string]interface{}{"name": p.Name}
+		cfg := map[string]interface{}{
+			"name":     p.Name,
+			"received": p.TrafficReceived,
+			"sent":     p.TrafficSent,
+		}
 		if s, ok := statsByName[p.PeerName]; ok {
 			cfg["ip"] = s.IP
-			cfg["received"] = s.Received
-			cfg["sent"] = s.Sent
 			cfg["last_handshake"] = s.LastHandshake
 		}
 		configs = append(configs, cfg)
