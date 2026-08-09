@@ -14,9 +14,13 @@ type User struct {
 }
 
 type Peer struct {
-	ID        int64     `db:"id" goqu:"skipinsert" json:"id"`
-	UserID    int64     `db:"user_id" json:"-"`
-	Name      string    `db:"name" json:"name"`
-	PeerName  string    `db:"peer_name" json:"-"`
-	CreatedAt time.Time `db:"created_at" goqu:"skipinsert" json:"created_at"`
+	ID                  int64     `db:"id" goqu:"skipinsert" json:"id"`
+	UserID              int64     `db:"user_id" json:"-"`
+	Name                string    `db:"name" json:"name"`
+	PeerName            string    `db:"peer_name" json:"-"`
+	TrafficReceived     int64     `db:"traffic_received" json:"traffic_received"`
+	TrafficSent         int64     `db:"traffic_sent" json:"traffic_sent"`
+	LastReceivedCounter int64     `db:"last_received_counter" json:"-"`
+	LastSentCounter     int64     `db:"last_sent_counter" json:"-"`
+	CreatedAt           time.Time `db:"created_at" goqu:"skipinsert" json:"created_at"`
 }
