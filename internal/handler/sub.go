@@ -2,8 +2,10 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/tamper000/multi-awg/internal/models"
@@ -64,11 +66,18 @@ func (h *Handler) subConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) subMihomo(w http.ResponseWriter, r *http.Request) {
-	_, _, sub, ok := h.loadSub(w, r)
+	user, _, sub, ok := h.loadSub(w, r)
 	if !ok {
 		return
 	}
 	w.Header().Set("Content-Type", "text/yaml")
+	filename := "Банановая подписка.yml"
+	w.Header().Set("Content-Disposition", `attachment; filename="banana-subscription.yml"; filename*=UTF-8''`+url.PathEscape(filename))
+	expire := int64(0)
+	if user.ExpiresAt != nil {
+		expire = user.ExpiresAt.Unix()
+	}
+	w.Header().Set("Subscription-Userinfo", fmt.Sprintf("expire=%d", expire))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(sub.MihomoYaml))
 }
