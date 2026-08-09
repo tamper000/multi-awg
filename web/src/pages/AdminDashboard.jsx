@@ -6,7 +6,6 @@ import Layout from './Layout.jsx'
 
 export default function AdminDashboard({ user, onLogout }) {
   const [users, setUsers] = useState(null)
-  const [error, setError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [credentials, setCredentials] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -14,12 +13,11 @@ export default function AdminDashboard({ user, onLogout }) {
   const [pwDone, setPwDone] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
-  const [syncKind, setSyncKind] = useState('success')
 
   const loginLink = credentials && `${location.origin}/login#${new URLSearchParams({ username: credentials.username, password: credentials.password })}`
 
   async function load() {
-    try { setUsers(await api('/api/admin/users')); setError('') } catch (err) { setError(err.message) }
+    try { setUsers(await api('/api/admin/users')) } catch {}
   }
   useEffect(() => { load() }, [])
 
@@ -46,8 +44,8 @@ export default function AdminDashboard({ user, onLogout }) {
     setSyncing(true); setSyncMsg('')
     try {
       await api('/api/admin/sync', { method: 'POST' })
-      setSyncKind('success'); setSyncMsg('Синхронизация завершена')
-    } catch (err) { setSyncKind('error'); setSyncMsg(err.message) }
+      setSyncMsg('Синхронизация завершена')
+    } catch { setSyncMsg('') }
     setTimeout(() => setSyncMsg(''), 3000)
     setSyncing(false)
   }
@@ -55,7 +53,7 @@ export default function AdminDashboard({ user, onLogout }) {
   const clients = users?.filter((item) => item.role === 'user') || []
   const active = clients.filter((item) => !item.expires_at || new Date(item.expires_at) > new Date()).length
   return <Layout user={user} onLogout={onLogout} onSync={sync} syncing={syncing} title="Пользователи" subtitle="Управление доступом и подписками" action={<button class="button button-primary" onClick={() => setCreateOpen(true)}><Icon name="plus" /> Добавить пользователя</button>}>
-    <Notice>{error}</Notice>{syncMsg && <div class="sync-notice"><Notice kind={syncKind}>{syncMsg}</Notice></div>}
+    {syncMsg && <div class="sync-notice"><Notice kind="success">{syncMsg}</Notice></div>}
     {!users ? <Loader /> : <>
       <section class="stats-grid admin-stats"><article class="stat-card accent-lime"><small>Всего пользователей</small><strong>{clients.length}</strong><span>Зарегистрировано</span></article><article class="stat-card accent-purple"><small>Активные подписки</small><strong>{active}</strong><span>Доступ разрешён</span></article><article class="stat-card"><small>Истекли</small><strong>{clients.length - active}</strong><span>Нужно продление</span></article></section>
       <section class="section-block"><div class="section-title"><div><h2>Список пользователей</h2><p>Откройте профиль для статистики и управления</p></div><button class="button button-ghost" onClick={() => setPwOpen(true)}><Icon name="key" /> Сменить пароль</button></div>

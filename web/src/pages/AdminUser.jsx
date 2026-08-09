@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { api, jsonBody } from '../api.js'
-import { formatBytes, formatDate, Icon, Loader, Modal, Notice } from '../ui.jsx'
+import { formatBytes, formatDate, Icon, Loader, Modal } from '../ui.jsx'
 import { navigate } from '../App.jsx'
 import Layout from './Layout.jsx'
 
@@ -24,7 +24,6 @@ export default function AdminUser({ userID, user }) {
   }
   const active = !data?.expires_at || new Date(data.expires_at) > new Date()
   return <Layout user={user} title={data?.username || 'Пользователь'} subtitle="Профиль пользователя и статистика подключений" action={<button class="button button-ghost" onClick={() => navigate('/admin')}><Icon name="back" /> К списку</button>}>
-    <Notice>{error}</Notice>
     {!data ? !error && <Loader /> : <>
       <section class="profile-card"><div class="profile-main"><span class="profile-avatar">{data.username[0].toUpperCase()}</span><div><span class={`status ${active ? 'active' : 'expired'}`}>{active ? 'Подписка активна' : 'Подписка истекла'}</span><h2>{data.username}</h2><p>Создан {formatDate(data.created_at)}</p></div></div><div class="profile-expiry"><small>Доступ до</small><strong>{formatDate(data.expires_at)}</strong></div><div class="profile-actions"><button class="button button-secondary" onClick={() => setExtendOpen(true)}>Продлить</button><button class="button button-danger" onClick={remove}><Icon name="trash" /> Удалить</button></div></section>
       <section class="section-block"><div class="section-title"><div><h2>Конфиги и статистика</h2><p>{data.configs.length} подключений пользователя</p></div></div>

@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'preact/hooks'
 import { api, jsonBody, session } from '../api.js'
-import { Brand, Icon, Notice } from '../ui.jsx'
+import { Brand, Icon } from '../ui.jsx'
 import { navigate } from '../App.jsx'
 
 export default function Login({ onLogin }) {
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function login(username, password) {
     setLoading(true)
-    setError('')
     try {
       const data = await api('/api/auth/login', { method: 'POST', body: jsonBody({ username, password }) })
       session.set(data.token, data.user)
       onLogin(data.user)
       navigate(data.user.role === 'admin' ? '/admin' : '/dashboard')
-    } catch (err) {
-      setError(err.message === 'invalid credentials' ? 'Неверный логин или пароль' : err.message)
+    } catch {
     } finally {
       setLoading(false)
     }
@@ -47,7 +44,6 @@ export default function Login({ onLogin }) {
         <p>Управляйте защищёнными подключениями на всех своих устройствах.</p>
       </div>
       <form onSubmit={submit} class="form-stack">
-        <Notice>{error}</Notice>
         <label>Логин<input name="username" autoComplete="username" required placeholder="Ваш логин" /></label>
         <label>Пароль<input name="password" type="password" autoComplete="current-password" required placeholder="Ваш пароль" /></label>
         <button class="button button-primary button-wide" disabled={loading}>{loading ? 'Входим…' : <>Войти <Icon name="arrow" /></>}</button>

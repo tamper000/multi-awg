@@ -6,18 +6,16 @@ import Layout from './Layout.jsx'
 export default function UserPanel({ user, onLogout }) {
   const [info, setInfo] = useState(null)
   const [configs, setConfigs] = useState(null)
-  const [error, setError] = useState('')
   const [modal, setModal] = useState('')
   const [pwDone, setPwDone] = useState(false)
   const [copied, setCopied] = useState(false)
   const [subscriptionCopied, setSubscriptionCopied] = useState(false)
 
   async function load() {
-    setError('')
     try {
       const [nextInfo, nextConfigs] = await Promise.all([api('/api/user/info'), api('/api/user/configs')])
       setInfo(nextInfo); setConfigs(nextConfigs)
-    } catch (err) { setError(err.message) }
+    } catch {}
   }
   useEffect(() => { load() }, [])
 
@@ -84,7 +82,6 @@ export default function UserPanel({ user, onLogout }) {
   const expired = info?.days_left === 0
   const subscriptionUrl = info?.subscription_url && `${location.origin}${info.subscription_url}`
   return <Layout user={user} onLogout={onLogout} title={`Привет, ${user.username}`} subtitle="Ваши защищённые подключения в одном месте" action={<div class="user-actions"><button class="button button-primary" onClick={() => setModal('create')} disabled={expired}><Icon name="plus" /> Новый конфиг</button>{subscriptionUrl && <button class="button button-ghost" onClick={openSubscriptionHelp}><Icon name="link" /> {copied ? 'Скопировано' : 'Ссылка для подключения'}</button>}</div>}>
-    <Notice>{error}</Notice>
     {expired && <Notice kind="warning">Подписка истекла: существующие конфиги заморожены, новые создать нельзя.</Notice>}
     {!info || !configs ? <Loader /> : <>
       <section class="stats-grid">
