@@ -34,6 +34,43 @@ type SnifferConfig struct {
 			Ports []string `yaml:"ports,omitempty"`
 		} `yaml:"QUIC,omitempty"`
 	} `yaml:"sniff,omitempty"`
+	ForceDomain    []string `yaml:"force-domain,omitempty"`
+	SkipDomain     []string `yaml:"skip-domain,omitempty"`
+	SkipSrcAddress []string `yaml:"skip-src-address,omitempty"`
+	SkipDstAddress []string `yaml:"skip-dst-address,omitempty"`
+}
+
+type DNSConfig struct {
+	Enable                       bool              `yaml:"enable,omitempty"`
+	CacheAlgorithm              string            `yaml:"cache-algorithm,omitempty"`
+	PreferH3                    bool              `yaml:"prefer-h3,omitempty"`
+	UseHosts                    bool              `yaml:"use-hosts,omitempty"`
+	UseSystemHosts              bool              `yaml:"use-system-hosts,omitempty"`
+	RespectRules                bool              `yaml:"respect-rules,omitempty"`
+	Listen                      string            `yaml:"listen,omitempty"`
+	IPv6                        bool              `yaml:"ipv6,omitempty"`
+	DefaultNameserver           []string          `yaml:"default-nameserver,omitempty"`
+	EnhancedMode                string            `yaml:"enhanced-mode,omitempty"`
+	FakeIPRange                string            `yaml:"fake-ip-range,omitempty"`
+	FakeIPFilterMode            string            `yaml:"fake-ip-filter-mode,omitempty"`
+	FakeIPFilter                []string          `yaml:"fake-ip-filter,omitempty"`
+	FakeIPTTL                   int               `yaml:"fake-ip-ttl,omitempty"`
+	NameserverPolicy             map[string]any    `yaml:"nameserver-policy,omitempty"`
+	Nameserver                  []string          `yaml:"nameserver,omitempty"`
+	Fallback                    []string          `yaml:"fallback,omitempty"`
+	ProxyServerNameserver       []string          `yaml:"proxy-server-nameserver,omitempty"`
+	ProxyServerNameserverPolicy map[string]string `yaml:"proxy-server-nameserver-policy,omitempty"`
+	DirectNameserver            []string          `yaml:"direct-nameserver,omitempty"`
+	DirectNameserverFollowPolicy bool              `yaml:"direct-nameserver-follow-policy,omitempty"`
+	FallbackFilter               FallbackFilter    `yaml:"fallback-filter,omitempty"`
+}
+
+type FallbackFilter struct {
+	GeoIP     bool     `yaml:"geoip,omitempty"`
+	GeoIPCode string   `yaml:"geoip-code,omitempty"`
+	Geosite   []string `yaml:"geosite,omitempty"`
+	IPCIDR    []string `yaml:"ipcidr,omitempty"`
+	Domain    []string `yaml:"domain,omitempty"`
 }
 
 // AmneziaWGOption представляет опции Amnezia WG
@@ -88,6 +125,7 @@ type ProxyGroup struct {
 // MihomoConfig представляет полную конфигурацию
 type MihomoConfig struct {
 	Sniffer     SnifferConfig `yaml:"sniffer,omitempty"`
+	DNS         DNSConfig     `yaml:"dns,omitempty"`
 	Proxies     []Proxy       `yaml:"proxies,omitempty"`
 	ProxyGroups []ProxyGroup  `yaml:"proxy-groups,omitempty"`
 	Rules       []string      `yaml:"rules,omitempty"`

@@ -2,7 +2,6 @@ sniffer:
   enable: true
   force-dns-mapping: true
   parse-pure-ip: true
-  override-destination: false
   sniff:
     HTTP:
       ports: [80, '8080-8880']
@@ -11,6 +10,18 @@ sniffer:
       ports: [443, 8443]
     QUIC:
       ports: [443, 8443]
+
+dns:
+  enable: true
+  cache-algorithm: arc
+  ipv6: false
+  default-nameserver:
+      - 1.1.1.1
+      - 8.8.8.8
+  enhanced-mode: fake-ip
+  nameserver:
+      - https://dns.adguard-dns.com/dns-query
+      - tls://dns.adguard-dns.com
 
 proxies:
   - name: "nameConfig"
