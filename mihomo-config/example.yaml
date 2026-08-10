@@ -49,6 +49,6 @@ proxy-groups:
 
 # --- Rules ---
 rules:
-    - GEOIP,RU,DIRECT
-
+    - GEOIP,private,DIRECT,no-resolve
+    - GEOIP,RU,DIRECT,no-resolve
     - MATCH,🌐 Обход РФ
